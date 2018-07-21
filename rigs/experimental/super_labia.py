@@ -295,9 +295,10 @@ class Rig:
 
         conv_twk = ''
         # Convergence tweak
+        # POE: convergence bone gets tweakable
         if self.params.conv_bone:
             conv_twk = get_bone_name(self.params.conv_bone, 'ctrl', 'tweak') #"tweak_" + self.params.conv_bone
-
+            print('Convergence tweak %s' % conv_twk)
             if not(conv_twk in eb.keys()):
                 conv_twk = copy_bone( self.obj, org(self.params.conv_bone), conv_twk )
 
@@ -328,7 +329,8 @@ class Rig:
                 align_bone_z_axis(self.obj, mch_ctrl_name, eb[b].z_axis)
 
             mch_ctrl += [mch_ctrl_name]
-
+            # POE: add extra mch-ctrl for tip
+            # POE: this should be parented to a convergence bone
             if b == org_bones[-1]: #Add extra
                 mch_ctrl_name = "MCH-CTRL-" + strip_org(b).split('.')[0] + suffix
                 mch_ctrl_name = copy_bone( self.obj, org(b), mch_ctrl_name )
@@ -403,8 +405,15 @@ class Rig:
         if 'pivot' in bones.keys():
             eb[ bones['pivot']['ctrl'] ].parent = eb[ bones['chain']['mch_auto'] ]
 
+        # POE: this drives the rotational lock to the convergence bone
+        # POE: should be done to the chain ending tweaks
+        # POE: may be switchable
+        print('Convergence parent ? %s' % bones['chain']['conv'])
+        print('Convergence last tweak %s' % bones['chain']['tweak'][-1])
+        print('Convergence last mch_ctrl %s' % bones['chain']['mch_ctrl'][-1])
         if bones['chain']['conv']:
-            eb[ bones['chain']['tweak'][-1] ].parent = eb[ bones['chain']['conv'] ]
+            #eb[ bones['chain']['tweak'][-1] ].parent = eb[ bones['chain']['conv'] ]
+            eb[ bones['chain']['mch_ctrl'][-1] ].parent = eb[ bones['chain']['conv'] ]
 
         if self.SINGLE_BONE:
             eb[bones['chain']['ctrl'][0]].parent = None
@@ -414,7 +423,7 @@ class Rig:
             eb[bones['chain']['mch'][0]].parent = eb[bones['chain']['mch'][1]]
             eb[bones['chain']['mch'][1]].parent = eb[bones['chain']['mch_ctrl'][0]]
 
-        return  
+        return
 
 
     def make_constraint(self, bone, constraint):
@@ -532,7 +541,7 @@ class Rig:
         #             'target_space' : 'LOCAL'
         #         } )
 
-        return  
+        return
 
 
     def stick_to_bendy_bones(self, bones):
@@ -548,7 +557,7 @@ class Rig:
         ctrl_end = pb[bones['chain']['ctrl'][-1]]
         mch_start = pb[bones['chain']['mch'][0]]
         mch_end = pb[bones['chain']['mch_ctrl'][-1]]
-        
+
         # POETODO: seems bbone_custom_handle_start/end are missing and is not looped over DEF-bones
         # see https://docs.blender.org/api/master/bpy.types.PoseBone.html
         if 'bbone_custom_handle_start' in dir(def_pb) and 'bbone_custom_handle_end' in dir(def_pb):
@@ -703,7 +712,7 @@ class Rig:
             #eb[bone].parent      = None
 
         chain_bones = [strip_org(b) for b in self.org_bones]
-        
+
         # create the deformation bones
         bones['def'] = self.create_deform()
         # create the pivot bone for chain-deformation (why it's at least 3 bones)
@@ -870,7 +879,7 @@ def create_sample(obj):
     bone.roll = 0.0000
     bone.use_connect = False
     bones['labia'] = bone.name
-    
+
     bone = arm.edit_bones.new('labia.001')
     bone.head[:] = 0.0000, 0.5000/10, 1.0000/10
     bone.tail[:] = 0.0000, 0.7500/10, 2.0000/10
@@ -878,7 +887,7 @@ def create_sample(obj):
     bone.use_connect = True
     bone.parent = arm.edit_bones[bones['labia']]
     bones['labia.001'] = bone.name
-    
+
     bone = arm.edit_bones.new('labia.002')
     bone.head[:] = 0.0000, 0.7500/10, 2.0000/10
     bone.tail[:] = 0.0000, 0.7500/10, 3.0000/10
@@ -886,7 +895,7 @@ def create_sample(obj):
     bone.use_connect = True
     bone.parent = arm.edit_bones[bones['labia.001']]
     bones['labia.002'] = bone.name
-    
+
     bone = arm.edit_bones.new('labia.003')
     bone.head[:] = 0.0000, 0.7500/10, 3.0000/10
     bone.tail[:] = 0.0000, 0.5000/10, 4.0000/10
@@ -894,7 +903,7 @@ def create_sample(obj):
     bone.use_connect = True
     bone.parent = arm.edit_bones[bones['labia.002']]
     bones['labia.003'] = bone.name
-    
+
     bone = arm.edit_bones.new('labia.004')
     bone.head[:] = 0.0000, 0.5000/10, 4.0000/10
     bone.tail[:] = 0.0000, 0.0000, 5.0000/10

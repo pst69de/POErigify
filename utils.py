@@ -16,6 +16,9 @@
 #
 #======================= END GPL LICENSE BLOCK ========================
 
+# POE History:
+# 2018-07-21: flip_bone & put_bone -> check against edit_bones
+
 # <pep8 compliant>
 
 import bpy
@@ -317,8 +320,10 @@ def copy_bone(obj, bone_name, assign_name=''):
 def flip_bone(obj, bone_name):
     """ Flips an edit bone.
     """
-    if bone_name not in obj.data.bones:
-        raise MetarigError("flip_bone(): bone '%s' not found, cannot copy it" % bone_name)
+    # POE: should be looked up in edit_bones
+    #if bone_name not in obj.data.bones:
+    if bone_name not in obj.data.edit_bones:
+        raise MetarigError("flip_bone(): bone '%s' not found, cannot flip it" % bone_name)
 
     if obj == bpy.context.active_object and bpy.context.mode == 'EDIT_ARMATURE':
         bone = obj.data.edit_bones[bone_name]
@@ -334,7 +339,9 @@ def flip_bone(obj, bone_name):
 def put_bone(obj, bone_name, pos):
     """ Places a bone at the given position.
     """
-    if bone_name not in obj.data.bones:
+    # POE: should be looked up in edit_bones
+    #if bone_name not in obj.data.bones:
+    if bone_name not in obj.data.edit_bones:
         raise MetarigError("put_bone(): bone '%s' not found, cannot move it" % bone_name)
 
     if obj == bpy.context.active_object and bpy.context.mode == 'EDIT_ARMATURE':
