@@ -23,36 +23,10 @@
 # first version for the "super_stretcher" bone system
 # feel free to reuse on your own project
 #
-# super_stretcher:
-# A guide_in bone being the parent of a shaft bone, itself being parent to the
-# guide_out bone. These will result in the ORG-bones copied by rigify.
-# -> ORG-guide_out will be reparented to ORG-guide_in without connect
-# -> ORG-shaft will have a Stretch To-modifier to guide_out
-# -> dependencies description:
-# -+ guide_in (root of construct, ctrl, excluded, if not needed as ctrl)
-#  +-+ ORG-guide_in (ORG, in case guide_in not needed, root)
-#    +-+ guide_out
-#    | +-+ ORG-guide_out
-#    |   +-- DEF-guide_out
-#    |
-#    +-+ ORG-shaft (Stretch to guide_out)
-#    | |
-#    | +-+ shaft_tweak.001
-#    | | +-- DEF-shaft.002 (Stretch to shaft_tweak.002)
-#    | |
-#    | +-+ shaft_tweak.002
-#    |   +-- DEF-shaft.003 (Stretch to guide_out)
-#    |
-#    +-- DEF-shaft.001 (Stretch to shaft_tweak.001)
-#
-# -> ORG_bones already made by rigify
-# -> generate guide_out
-# -> generate guide_in (if needed)
-# -> generate tweaks
-# -> generate deform
-# -> refine constraints
-# -> provide locks
-# -> parent up the tree
+# super_ring:
+# of a radial bone make a deforming ring structure of
+# configurable "wing"-lengths
+# (a wing is half of the ring e.g. 3 in the wing makes 6 elements around)
 #
 # -> it is a good idea to keep your bone lists consistent
 #    with the parenting order, then it is easier to parent the bones
@@ -73,7 +47,7 @@ class Rig:
     def __init__(self, obj, bone_name, params):
         # constructor for this class, in here the local parameters are defined
         self.obj = obj
-        print('super_template on %s' % bone_name)
+        print('!!!WIP!!! super_ring on %s' % bone_name)
         # stretch_bone is the main element of this system
         self.stretch_bone = bone_name
         # just in case we have a suffix
@@ -84,7 +58,7 @@ class Rig:
         # this list may be modified by head or tail params
         self.org_bones = []
         # + bone_name.parent
-        #print('super_template params.guide_in_bone %s' % params.guide_in_bone)
+        #print('super_ring params.guide_in_bone %s' % params.guide_in_bone)
         if params.guide_in_bone:
             self.org_bones += [org(params.guide_in_bone)]
         self.org_bones += [bone_name] + connected_children_names(obj, bone_name)
@@ -123,7 +97,7 @@ class Rig:
 
         # construct mechanics of the bone system
         # i.e. for tweaking the stretch route
-        print('super_template.make_mechanics')
+        print('super_ring.make_mechanics')
         bpy.ops.object.mode_set(mode ='EDIT')
         eb = self.obj.data.edit_bones
         #org_bones = self.org_bones
@@ -131,7 +105,7 @@ class Rig:
         # start by copying the stretch_bone in elements
         for ix in range(self.bbone_elements):
             mch_name = mch(strip_org(self.stretch_bone) + (".%03d" % ix) + self.suffix)
-            print('super_template.make_mechanics make %03d %s' % (ix, mch_name) )
+            print('super_ring.make_mechanics make %03d %s' % (ix, mch_name) )
             mch_name = copy_bone_simple( self.obj, self.stretch_bone, mch_name)
             eb[ mch_name ].length /= self.bbone_elements
             if ix > 0:
@@ -144,7 +118,7 @@ class Rig:
 
         # Just a control for the guide_out,
         # but keep structure to build more complex control sets
-        print('super_template.make_controls')
+        print('super_ring.make_controls')
         bpy.ops.object.mode_set(mode ='EDIT')
         org_bones = self.org_bones
         ctrl_chain = []
@@ -177,7 +151,7 @@ class Rig:
 
         # the tweaks itself are the shaped bones
         # controlling the mechanics in the bone system
-        print('super_template.make_tweaks')
+        print('super_ring.make_tweaks')
         bpy.ops.object.mode_set(mode ='EDIT')
         eb = self.obj.data.edit_bones
         tweak_chain = []
@@ -232,7 +206,7 @@ class Rig:
     def make_deform(self, mch_chain):
 
         # make the finally deforming skeleton meshes are rigged to
-        print('super_template.make_deform')
+        print('super_ring.make_deform')
         bpy.ops.object.mode_set(mode ='EDIT')
         eb = self.obj.data.edit_bones
         def_chain = []
@@ -269,7 +243,7 @@ class Rig:
     def parent_bones(self, all_bones):
 
         # give the parenting to the constructed bone system
-        print('super_template.parent_bones')
+        print('super_ring.parent_bones')
         # test if above works out
         #return
         bpy.ops.object.mode_set(mode ='EDIT')
@@ -299,10 +273,10 @@ class Rig:
         #    eb[ bone ].parent = eb[ all_bones['control'][previous_index] ]
         if self.guide_in_control:
             # guide_out control is 2nd
-            print('super_template.parent_bones parent %s to %s' % (all_bones['control'][1],org_bones[0]))
+            print('super_ring.parent_bones parent %s to %s' % (all_bones['control'][1],org_bones[0]))
             eb[all_bones['control'][1]].parent = eb[org_bones[0]]
         else:
-            print('super_template.parent_bones parent %s to %s' % (all_bones['control'][0],org_bones[0]))
+            print('super_ring.parent_bones parent %s to %s' % (all_bones['control'][0],org_bones[0]))
             eb[all_bones['control'][0]].parent = eb[org_bones[0]]
 
         # Parent tweak bones
@@ -316,29 +290,29 @@ class Rig:
             #else:
             #    parent = all_bones['control'][ tweaks.index( tweak ) ]
             #eb[ tweak ].parent = eb[ parent ]
-            print('super_template.parent_bones parent %s to %s' % (tweak,self.stretch_bone))
+            print('super_ring.parent_bones parent %s to %s' % (tweak,self.stretch_bone))
             eb[ tweak ].parent = eb[ self.stretch_bone ]
 
         # Parent mechanics bones
         # the 1st to ORG-guide_in
         mechs = all_bones['mch']
-        print('super_template.parent_bones parent %s to %s' % (mechs[0],org_bones[0]))
+        print('super_ring.parent_bones parent %s to %s' % (mechs[0],org_bones[0]))
         eb[mechs[0]].parent = eb[org_bones[0]]
         # all other to their tweaks
         for mch in mechs[1:]:
-            print('super_template.parent_bones parent %s to %s' % (mch,strip_mch(mch)))
+            print('super_ring.parent_bones parent %s to %s' % (mch,strip_mch(mch)))
             eb[mch].parent = eb[strip_mch(mch)]
 
         # Parent deform bones
         def_bones = all_bones['deform']
         ixfrom = 1
         if self.guide_in_deform:
-            print('super_template.parent_bones parent %s to %s' % (def_bones[0],org_bones[0]))
+            print('super_ring.parent_bones parent %s to %s' % (def_bones[0],org_bones[0]))
             eb[def_bones[0]].parent = eb[org_bones[0]]
             ixfrom += 1
         ixto = len(def_bones)
         if self.guide_out_deform:
-            print('super_template.parent_bones parent %s to %s' % (def_bones[-1],org_bones[-1]))
+            print('super_ring.parent_bones parent %s to %s' % (def_bones[-1],org_bones[-1]))
             eb[def_bones[-1]].parent = eb[org_bones[-1]]
             ixto -= 1
         # parent the deforms to the corresponding mchs
@@ -347,7 +321,7 @@ class Rig:
                 mch_index = all_bones['deform'].index( bone ) - 1
             else:
                 mch_index = all_bones['deform'].index( bone )
-            print('super_template.parent_bones parent %s to %s' % (bone,all_bones['mch'][mch_index]))
+            print('super_ring.parent_bones parent %s to %s' % (bone,all_bones['mch'][mch_index]))
             eb[ bone ].parent = eb[ all_bones['mch'][mch_index] ]
             #eb[ bone ].use_connect = True
 
@@ -358,22 +332,22 @@ class Rig:
         # if there is a guide_in-Control, this will be parent of the ORG-guide_in
         # else the ORG-guide_in is root to the system
         if self.guide_in_control:
-            print('super_template.parent_bones parent %s to %s' % (org_bones[0],all_bones['control'][0]))
+            print('super_ring.parent_bones parent %s to %s' % (org_bones[0],all_bones['control'][0]))
             eb[ org_bones[0]].parent = eb[all_bones['control'][0]]
         if self.guide_in_bone:
-            print('super_template.parent_bones parent %s to %s' % (org_bones[1],org_bones[0]))
+            print('super_ring.parent_bones parent %s to %s' % (org_bones[1],org_bones[0]))
             eb[ org_bones[1]].parent = eb[org_bones[0]]
-            print('super_template.parent_bones parent %s to %s' % (org_bones[2],all_bones['control'][-1]))
+            print('super_ring.parent_bones parent %s to %s' % (org_bones[2],all_bones['control'][-1]))
             eb[ org_bones[2]].parent = eb[all_bones['control'][-1]]
         else:
-            print('super_template.parent_bones parent %s to %s' % (org_bones[1],all_bones['control'][-1]))
+            print('super_ring.parent_bones parent %s to %s' % (org_bones[1],all_bones['control'][-1]))
             eb[ org_bones[1]].parent = eb[all_bones['control'][-1]]
         # and out
 
     def make_constraints(self, all_bones):
 
         # make the needed constrainting modifiers to the bone system
-        print('super_template.make_constraints')
+        print('super_ring.make_constraints')
         # test if above works out
         #return
         bpy.ops.object.mode_set(mode ='OBJECT')
@@ -412,19 +386,19 @@ class Rig:
         #        con.owner_space = 'LOCAL'
         # STRETCH_TO for ORG-shaft (displaces the parented tweaks accordingly)
         if self.guide_in_bone:
-            print('super_template.make_constraints %s stretch_to %s' % (org_bones[1],org_bones[2]))
+            print('super_ring.make_constraints %s stretch_to %s' % (org_bones[1],org_bones[2]))
             con = pb[org_bones[1]].constraints.new('STRETCH_TO')
             con.target = self.obj
             con.subtarget = org_bones[2]
         else:
-            print('super_template.make_constraints %s stretch_to %s' % (org_bones[0],org_bones[1]))
+            print('super_ring.make_constraints %s stretch_to %s' % (org_bones[0],org_bones[1]))
             con = pb[org_bones[0]].constraints.new('STRETCH_TO')
             con.target = self.obj
             con.subtarget = org_bones[1]
         ixfrom = (1 if self.guide_in_deform else 0)
         for deform in deforms[ixfrom:-1]:
             target_bone = deforms[ deforms.index( deform ) + 1 ]
-            print('super_template.make_constraints %s stretch_to %s' % (deform,target_bone))
+            print('super_ring.make_constraints %s stretch_to %s' % (deform,target_bone))
             con = pb[deform].constraints.new('STRETCH_TO')
             con.target = self.obj
             con.subtarget = target_bone
@@ -432,12 +406,12 @@ class Rig:
             pb[deform].use_bbone_custom_handles = True
             if deforms.index( deform ) > 0:
                 from_bone = deforms[ deforms.index( deform ) - 1 ]
-                print('super_template.make_constraints %s handle_in %s' % (deform,from_bone))
+                print('super_ring.make_constraints %s handle_in %s' % (deform,from_bone))
                 pb[deform].bbone_custom_handle_start = pb[from_bone]
-            print('super_template.make_constraints %s handle_out %s' % (deform,target_bone))
+            print('super_ring.make_constraints %s handle_out %s' % (deform,target_bone))
             pb[deform].bbone_custom_handle_end = pb[target_bone]
         if not self.guide_out_deform:
-            print('super_template.make_constraints %s stretch_to %s' % (deforms[-1],org_bones[-1]))
+            print('super_ring.make_constraints %s stretch_to %s' % (deforms[-1],org_bones[-1]))
             con = pb[deforms[-1]].constraints.new('STRETCH_TO')
             con.target = self.obj
             con.subtarget = org_bones[-1]
@@ -447,7 +421,7 @@ class Rig:
     def generate(self):
 
         # main generation method
-        print('super_template.generate')
+        print('super_ring.generate')
         bpy.ops.object.mode_set(mode ='EDIT')
         eb = self.obj.data.edit_bones
         # Clear all initial parenting
@@ -656,7 +630,7 @@ def create_sample(obj):
     pbone.lock_scale = (False, False, False)
     pbone.rotation_mode = 'QUATERNION'
     pbone = obj.pose.bones[bones['shaft']]
-    pbone.rigify_type = 'experimental.super_template'
+    pbone.rigify_type = 'experimental.super_ring'
     pbone.lock_location = (False, False, False)
     pbone.lock_rotation = (False, False, False)
     pbone.lock_rotation_w = False
