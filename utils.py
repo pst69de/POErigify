@@ -120,10 +120,19 @@ org_name = strip_org
 
 
 def strip_mch(name):
-    """ Returns the name with ORG_PREFIX stripped from it.
+    """ Returns the name with MCH_PREFIX stripped from it.
         """
     if name.startswith(MCH_PREFIX):
         return name[len(MCH_PREFIX):]
+    else:
+        return name
+
+# POE: added new helper
+def strip_def(name):
+    """ Returns the name with DEF_PREFIX stripped from it.
+        """
+    if name.startswith(DEF_PREFIX):
+        return name[len(DEF_PREFIX):]
     else:
         return name
 

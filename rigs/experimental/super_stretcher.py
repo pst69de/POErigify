@@ -54,13 +54,18 @@
 # -> provide locks
 # -> parent up the tree
 #
+# -> reorder parenting
+#    -> MCH-shaft.00x are parent of shaft.00x (tweaks)
+#    -> MCH-shaft-00x do copy location of ORG-shaft
+#        by offset and with bezier enabled
+#
 # -> it is a good idea to keep your bone lists consistent
 #    with the parenting order, then it is easier to parent the bones
 #    by looping the bone lists
 ###############################
 import bpy
 from ...utils import copy_bone, copy_bone_simple, put_bone
-from ...utils import org, strip_org, mch, strip_mch
+from ...utils import org, strip_org, mch, strip_mch, deformer, strip_def
 from ...utils import make_deformer_name, connected_children_names
 from ...utils import make_mechanism_name, create_sphere_widget
 from ...utils import create_widget, create_circle_widget
@@ -268,109 +273,21 @@ class Rig:
         # and out
         return def_chain
 
-    def parent_bones(self, all_bones):
+    # helper for making constraints
+    def make_constraint(self, bone, constraint):
+        bpy.ops.object.mode_set(mode='OBJECT')
+        pb = self.obj.pose.bones
 
-        # give the parenting to the constructed bone system
-        print('super_stretcher.parent_bones')
-        # test if above works out
-        #return
-        bpy.ops.object.mode_set(mode ='EDIT')
-        org_bones = self.org_bones
-        eb        = self.obj.data.edit_bones
-
-        # -+ guide_in (root of construct, ctrl, excluded, if not needed as ctrl)
-        #  +-+ ORG-guide_in (ORG, in case guide_in not needed, root)
-        #    +-+ guide_out
-        #    | +-+ ORG-guide_out
-        #    |   +-- DEF-guide_out
-        #    |
-        #    +-+ ORG-shaft (Stretch to guide_out)
-        #    | |
-        #    | +-+ shaft_tweak.001
-        #    | | +-- DEF-shaft.002 (Stretch to shaft_tweak.002)
-        #    | |
-        #    | +-+ shaft_tweak.002
-        #    |   +-- DEF-shaft.003 (Stretch to guide_out)
-        #    |
-        #    +-- DEF-shaft.001 (Stretch to shaft_tweak.001)
-
-        # Parent control bones
-        # example of chaining the controls, not needed in this system
-        #for bone in all_bones['control'][1:]:
-        #    previous_index    = all_bones['control'].index( bone ) - 1
-        #    eb[ bone ].parent = eb[ all_bones['control'][previous_index] ]
-        if self.guide_in_control:
-            # guide_out control is 2nd
-            print('super_stretcher.parent_bones parent %s to %s' % (all_bones['control'][1],org_bones[0]))
-            eb[all_bones['control'][1]].parent = eb[org_bones[0]]
-        else:
-            print('super_stretcher.parent_bones parent %s to %s' % (all_bones['control'][0],org_bones[0]))
-            eb[all_bones['control'][0]].parent = eb[org_bones[0]]
-
-        # Parent tweak bones
-        tweaks = all_bones['tweak']
-        for tweak in all_bones['tweak']:
-            # are all parented to the stretch_bone
-            # example of parenting to controls
-            #parent = ''
-            #if tweaks.index( tweak ) == len( tweaks ) - 1:
-            #    parent = all_bones['control'][ -1 ]
-            #else:
-            #    parent = all_bones['control'][ tweaks.index( tweak ) ]
-            #eb[ tweak ].parent = eb[ parent ]
-            print('super_stretcher.parent_bones parent %s to %s' % (tweak,self.stretch_bone))
-            eb[ tweak ].parent = eb[ self.stretch_bone ]
-
-        # Parent mechanics bones
-        # the 1st to ORG-guide_in
-        mechs = all_bones['mch']
-        print('super_stretcher.parent_bones parent %s to %s' % (mechs[0],org_bones[0]))
-        eb[mechs[0]].parent = eb[org_bones[0]]
-        # all other to their tweaks
-        for mch in mechs[1:]:
-            print('super_stretcher.parent_bones parent %s to %s' % (mch,strip_mch(mch)))
-            eb[mch].parent = eb[strip_mch(mch)]
-
-        # Parent deform bones
-        def_bones = all_bones['deform']
-        ixfrom = 1
-        if self.guide_in_deform:
-            print('super_stretcher.parent_bones parent %s to %s' % (def_bones[0],org_bones[0]))
-            eb[def_bones[0]].parent = eb[org_bones[0]]
-            ixfrom += 1
-        ixto = len(def_bones)
-        if self.guide_out_deform:
-            print('super_stretcher.parent_bones parent %s to %s' % (def_bones[-1],org_bones[-1]))
-            eb[def_bones[-1]].parent = eb[org_bones[-1]]
-            ixto -= 1
-        # parent the deforms to the corresponding mchs
-        for bone in all_bones['deform'][ixfrom:ixto]:
-            if self.guide_in_deform:
-                mch_index = all_bones['deform'].index( bone ) - 1
-            else:
-                mch_index = all_bones['deform'].index( bone )
-            print('super_stretcher.parent_bones parent %s to %s' % (bone,all_bones['mch'][mch_index]))
-            eb[ bone ].parent = eb[ all_bones['mch'][mch_index] ]
-            #eb[ bone ].use_connect = True
-
-        # Parent org bones ( to tweaks by default, or to the controls )
-        # not needed for this system
-        #for org, tweak in zip( org_bones, all_bones['tweak'] ):
-        #    eb[ org ].parent = eb[ tweak ]
-        # if there is a guide_in-Control, this will be parent of the ORG-guide_in
-        # else the ORG-guide_in is root to the system
-        if self.guide_in_control:
-            print('super_stretcher.parent_bones parent %s to %s' % (org_bones[0],all_bones['control'][0]))
-            eb[ org_bones[0]].parent = eb[all_bones['control'][0]]
-        if self.guide_in_bone:
-            print('super_stretcher.parent_bones parent %s to %s' % (org_bones[1],org_bones[0]))
-            eb[ org_bones[1]].parent = eb[org_bones[0]]
-            print('super_stretcher.parent_bones parent %s to %s' % (org_bones[2],all_bones['control'][-1]))
-            eb[ org_bones[2]].parent = eb[all_bones['control'][-1]]
-        else:
-            print('super_stretcher.parent_bones parent %s to %s' % (org_bones[1],all_bones['control'][-1]))
-            eb[ org_bones[1]].parent = eb[all_bones['control'][-1]]
-        # and out
+        owner_pb = pb[bone]
+        const = owner_pb.constraints.new(constraint['constraint'])
+        const.target = self.obj
+        # testing
+        #for p in [k for k in constraint.keys()]:
+        #    print('super_stretcher.make_constraint constraint.keys() %s' % p)
+        # filter contraint props to those that actually exist in the current
+        # type of constraint, then assign values to each
+        for p in [k for k in constraint.keys() if k in dir(const)]:
+            setattr(const, p, constraint[p])
 
     def make_constraints(self, all_bones):
 
@@ -385,6 +302,7 @@ class Rig:
         ctrls   = all_bones['control']
         tweaks  = all_bones['tweak'  ]
         deforms = all_bones['deform' ]
+        mechs   = all_bones['mch'    ]
         # example for looping constraints through a chain
         #for deform, tweak, ctrl in zip( deforms, tweaks, ctrls ):
         #    # copy transform
@@ -454,8 +372,133 @@ class Rig:
             con = pb[deforms[-1]].constraints.new('STRETCH_TO')
             con.target = self.obj
             con.subtarget = org_bones[-1]
+        # POETODO: copy location constraint for MCH-shaft on ORG-shaft with bezier
+        # 1st would do too, but not necessary
+        for ix in range(len(mechs)):
+            mech = mechs[ix]
+            self.make_constraint( mech, {
+                'constraint': 'COPY_LOCATION'
+                , 'subtarget' : self.stretch_bone
+                , 'owner_space'  : 'WORLD'
+                , 'target_space' : 'WORLD'
+                , 'head_tail' : (ix /self.bbone_elements)
+                , 'use_bbone_shape' : True
+            } )
         # and out
 
+    def parent_bones(self, all_bones):
+
+        # give the parenting to the constructed bone system
+        print('super_stretcher.parent_bones')
+        # test if above works out
+        #return
+        bpy.ops.object.mode_set(mode ='EDIT')
+        org_bones = self.org_bones
+        eb        = self.obj.data.edit_bones
+
+        # -+ guide_in (root of construct, ctrl, excluded, if not needed as ctrl)
+        #  +-+ ORG-guide_in (ORG, in case guide_in not needed, root)
+        #    +-+ guide_out
+        #    | +-+ ORG-guide_out
+        #    |   +-- DEF-guide_out
+        #    |
+        #    +-+ ORG-shaft (Stretch to guide_out)
+        #    | |
+        #    | +-+ shaft_tweak.001
+        #    | | +-- DEF-shaft.002 (Stretch to shaft_tweak.002)
+        #    | |
+        #    | +-+ shaft_tweak.002
+        #    |   +-- DEF-shaft.003 (Stretch to guide_out)
+        #    |
+        #    +-- DEF-shaft.001 (Stretch to shaft_tweak.001)
+
+        # Parent control bones
+        # example of chaining the controls, not needed in this system
+        #for bone in all_bones['control'][1:]:
+        #    previous_index    = all_bones['control'].index( bone ) - 1
+        #    eb[ bone ].parent = eb[ all_bones['control'][previous_index] ]
+        if self.guide_in_control:
+            # guide_out control is 2nd
+            print('super_stretcher.parent_bones parent %s to %s' % (all_bones['control'][1],org_bones[0]))
+            eb[all_bones['control'][1]].parent = eb[org_bones[0]]
+        else:
+            print('super_stretcher.parent_bones parent %s to %s' % (all_bones['control'][0],org_bones[0]))
+            eb[all_bones['control'][0]].parent = eb[org_bones[0]]
+
+        # Parent tweak bones
+        tweaks = all_bones['tweak']
+        for tweak in all_bones['tweak']:
+            # are all parented to the stretch_bone
+            # example of parenting to controls
+            #parent = ''
+            #if tweaks.index( tweak ) == len( tweaks ) - 1:
+            #    parent = all_bones['control'][ -1 ]
+            #else:
+            #    parent = all_bones['control'][ tweaks.index( tweak ) ]
+            #eb[ tweak ].parent = eb[ parent ]
+            print('super_stretcher.parent_bones parent %s to %s' % (tweak,mch(tweak)))
+            # parent to MCH-shaft.00x
+            eb[ tweak ].parent = eb[ mch(tweak) ]
+
+        # Parent mechanics bones
+        # the 1st to ORG-guide_in
+        mechs = all_bones['mch']
+        print('super_stretcher.parent_bones parent %s to %s' % (mechs[0],org_bones[0]))
+        eb[mechs[0]].parent = eb[org_bones[0]]
+        # all other to their tweaks
+        # parent to self.stretch_bone
+        for mech in mechs[1:]:
+            print('super_stretcher.parent_bones parent %s to %s' % (mech,self.stretch_bone))
+            eb[mech].parent = eb[self.stretch_bone]
+
+        # Parent deform bones
+        def_bones = all_bones['deform']
+        ixfrom = 1
+        if self.guide_in_deform:
+            print('super_stretcher.parent_bones parent %s to %s' % (def_bones[0],org_bones[0]))
+            eb[def_bones[0]].parent = eb[org_bones[0]]
+            ixfrom += 1
+            # 1st element deform to org_bones[1]
+            print('super_stretcher.parent_bones parent %s to %s' % (def_bones[1],org_bones[1]))
+            eb[def_bones[1]].parent = eb[org_bones[1]]
+        else:
+            # 1st element deform to org_bones[1]
+            print('super_stretcher.parent_bones parent %s to %s' % (def_bones[0],org_bones[1]))
+            eb[def_bones[0]].parent = eb[org_bones[1]]            
+        ixto = len(def_bones)
+        if self.guide_out_deform:
+            print('super_stretcher.parent_bones parent %s to %s' % (def_bones[-1],org_bones[-1]))
+            eb[def_bones[-1]].parent = eb[org_bones[-1]]
+            ixto -= 1
+        # parent the deforms to the corresponding mchs
+        # parent to tweaks
+        for bone in all_bones['deform'][ixfrom:ixto]:
+            #if self.guide_in_deform:
+            #    mch_index = all_bones['deform'].index( bone ) - 1
+            #else:
+            #    mch_index = all_bones['deform'].index( bone )
+            print('super_stretcher.parent_bones parent %s to %s' % (bone,strip_def(bone)))
+            eb[ bone ].parent = eb[ strip_def(bone) ]
+            #eb[ bone ].use_connect = True
+
+        # Parent org bones ( to tweaks by default, or to the controls )
+        # not needed for this system
+        #for org, tweak in zip( org_bones, all_bones['tweak'] ):
+        #    eb[ org ].parent = eb[ tweak ]
+        # if there is a guide_in-Control, this will be parent of the ORG-guide_in
+        # else the ORG-guide_in is root to the system
+        if self.guide_in_control:
+            print('super_stretcher.parent_bones parent %s to %s' % (org_bones[0],all_bones['control'][0]))
+            eb[ org_bones[0]].parent = eb[all_bones['control'][0]]
+        if self.guide_in_bone:
+            print('super_stretcher.parent_bones parent %s to %s' % (org_bones[1],org_bones[0]))
+            eb[ org_bones[1]].parent = eb[org_bones[0]]
+            print('super_stretcher.parent_bones parent %s to %s' % (org_bones[2],all_bones['control'][-1]))
+            eb[ org_bones[2]].parent = eb[all_bones['control'][-1]]
+        else:
+            print('super_stretcher.parent_bones parent %s to %s' % (org_bones[1],all_bones['control'][-1]))
+            eb[ org_bones[1]].parent = eb[all_bones['control'][-1]]
+        # and out
 
     def generate(self):
 

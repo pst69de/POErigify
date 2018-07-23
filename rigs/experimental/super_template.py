@@ -370,6 +370,20 @@ class Rig:
             eb[ org_bones[1]].parent = eb[all_bones['control'][-1]]
         # and out
 
+    # helper for making constraints 
+    def make_constraint(self, bone, constraint):
+        bpy.ops.object.mode_set(mode='OBJECT')
+        pb = self.obj.pose.bones
+
+        owner_pb = pb[bone]
+        const = owner_pb.constraints.new(constraint['constraint'])
+        const.target = self.obj
+
+        # filter contraint props to those that actually exist in the current
+        # type of constraint, then assign values to each
+        for p in [k for k in constraint.keys() if k in dir(const)]:
+            setattr(const, p, constraint[p])
+
     def make_constraints(self, all_bones):
 
         # make the needed constrainting modifiers to the bone system
