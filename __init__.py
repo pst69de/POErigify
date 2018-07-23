@@ -28,7 +28,7 @@ bl_info = {
     "location": "Armature properties, Bone properties, View3d tools panel, Armature Add menu",
     "wiki_url": "http://wiki69.pst69.homeip.net/index.php/POErigify"
                 "Scripts/Rigging/POEigify",
-    "tracker_url": "",
+    "tracker_url": "https://github.com/pst69de/POErigify",
     "support": "TESTING",
     "category": "Rigging"}
 
