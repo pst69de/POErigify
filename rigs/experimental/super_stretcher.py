@@ -78,7 +78,7 @@ class Rig:
     def __init__(self, obj, bone_name, params):
         # constructor for this class, in here the local parameters are defined
         self.obj = obj
-        print('super_stretcher on %s' % bone_name)
+        print('!!!WIP!!! super_stretcher on %s' % bone_name)
         # stretch_bone is the main element of this system
         self.stretch_bone = bone_name
         # just in case we have a suffix
@@ -89,10 +89,19 @@ class Rig:
         # this list may be modified by head or tail params
         self.org_bones = []
         # + bone_name.parent
+        # POE 2018-07-24: added some debugging
         #print('super_stretcher params.guide_in_bone %s' % params.guide_in_bone)
         if params.guide_in_bone:
             self.org_bones += [org(params.guide_in_bone)]
-        self.org_bones += [bone_name] + connected_children_names(obj, bone_name)
+        else:
+            print('super_stretcher guide_in_bone not defined !')
+        self.org_bones += [bone_name]
+        child_bones = connected_children_names(obj, bone_name)
+        if len(child_bones) > 0:
+            self.org_bones += child_bones
+        else:
+            print('super_stretcher no connected child !')
+        #print('super_stretcher len(self.org_bones) ', len(self.org_bones))
         self.params = params
         # in principle do a copy of the add_parameters method
         # and assign params properties to "self"-properties
@@ -118,8 +127,9 @@ class Rig:
             self.tweak_layers = list(params.tweak_layers)
         else:
             self.tweak_layers = None
-        # construct must have 3 bones: guide_in, shaft, guide_out
-        if len(self.org_bones) != 3:
+        # POE 2018-07-24: not that strict may work too
+        # construct must have 2 or 3 bones: (guide_in,) shaft, guide_out
+        if len(self.org_bones) > 3 or len(child_bones) < 1:
             raise MetarigError(
                 "RIGIFY ERROR: invalid rig structure on bone: %s (%d bones)" % (strip_org(bone_name),len(self.org_bones))
             )
@@ -420,10 +430,16 @@ class Rig:
         if self.guide_in_control:
             # guide_out control is 2nd
             print('super_stretcher.parent_bones parent %s to %s' % (all_bones['control'][1],org_bones[0]))
+            eb[all_bones['control'][1]].use_connect = False
             eb[all_bones['control'][1]].parent = eb[org_bones[0]]
+            eb[all_bones['control'][1]].use_inherit_rotation = True
+            eb[all_bones['control'][1]].use_inherit_scale = False
         else:
             print('super_stretcher.parent_bones parent %s to %s' % (all_bones['control'][0],org_bones[0]))
+            eb[all_bones['control'][0]].use_connect = False
             eb[all_bones['control'][0]].parent = eb[org_bones[0]]
+            eb[all_bones['control'][0]].use_inherit_rotation = True
+            eb[all_bones['control'][0]].use_inherit_scale = False
 
         # Parent tweak bones
         tweaks = all_bones['tweak']
@@ -464,7 +480,7 @@ class Rig:
         else:
             # 1st element deform to org_bones[1]
             print('super_stretcher.parent_bones parent %s to %s' % (def_bones[0],org_bones[1]))
-            eb[def_bones[0]].parent = eb[org_bones[1]]            
+            eb[def_bones[0]].parent = eb[org_bones[1]]
         ixto = len(def_bones)
         if self.guide_out_deform:
             print('super_stretcher.parent_bones parent %s to %s' % (def_bones[-1],org_bones[-1]))
@@ -492,12 +508,19 @@ class Rig:
             eb[ org_bones[0]].parent = eb[all_bones['control'][0]]
         if self.guide_in_bone:
             print('super_stretcher.parent_bones parent %s to %s' % (org_bones[1],org_bones[0]))
-            eb[ org_bones[1]].parent = eb[org_bones[0]]
+            eb[org_bones[1]].use_connect = True
+            eb[org_bones[1]].parent = eb[org_bones[0]]
+            eb[org_bones[1]].use_inherit_rotation = True
+            eb[org_bones[1]].use_inherit_scale = True
             print('super_stretcher.parent_bones parent %s to %s' % (org_bones[2],all_bones['control'][-1]))
-            eb[ org_bones[2]].parent = eb[all_bones['control'][-1]]
+            eb[org_bones[2]].parent = eb[all_bones['control'][-1]]
+            eb[org_bones[2]].use_inherit_rotation = True
+            eb[org_bones[2]].use_inherit_scale = True
         else:
             print('super_stretcher.parent_bones parent %s to %s' % (org_bones[1],all_bones['control'][-1]))
-            eb[ org_bones[1]].parent = eb[all_bones['control'][-1]]
+            eb[org_bones[1]].parent = eb[all_bones['control'][-1]]
+            eb[org_bones[1]].use_inherit_rotation = True
+            eb[org_bones[1]].use_inherit_scale = True
         # and out
 
     def generate(self):
@@ -507,7 +530,8 @@ class Rig:
         bpy.ops.object.mode_set(mode ='EDIT')
         eb = self.obj.data.edit_bones
         # Clear all initial parenting
-        for bone in self.org_bones:
+        # POE 2018-07-24: keep incoming parentship -> clear from 2nd
+        for bone in self.org_bones[1:]:
             eb[ bone ].parent      = None
             eb[ bone ].use_connect = False
         # will be "reparented" by self.parent_bones(), see below

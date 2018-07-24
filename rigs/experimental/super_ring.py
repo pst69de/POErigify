@@ -72,8 +72,9 @@ class Rig:
         #    self.tweak_layers = list(params.tweak_layers)
         #else:
         #    self.tweak_layers = None
-        # construct must have 3 bones: guide_in, shaft, guide_out
-        if len(self.org_bones) > 2:
+        # construct must have 2 bones: radial_bone, sizing_bone
+        # POE 2018-07-24: radial_bone carries this rig, sizing_bone may not be there
+        if len(self.org_bones) > 2 or not self.obj.pose.bones[self.sizing_bone]:
             raise MetarigError(
                 "RIGIFY ERROR: invalid rig structure on bone: %s (%d bones)" % (strip_org(bone_name),len(self.org_bones))
             )
@@ -158,10 +159,11 @@ class Rig:
         #print('super_ring.make_deform head before ', eb[def_bone].head)
         #print('super_ring.make_deform tail before ', eb[def_bone].tail)
         # 1st right angle turn to the tangent of the circular system
-        mat_rot = mathutils.Matrix.Rotation(math.radians(90.0), 4, eb[def_bone].x_axis)
+        # POE 2018-07-24: rotation operation depends on orientation of radial_bone
+        mat_rot = mathutils.Matrix.Rotation(math.radians(90.0), 4, eb[self.radial_bone].x_axis)
         eb[def_bone].tail = (mat_rot * eb[def_bone].vector) + eb[def_bone].head
         # 2nd half angle turn to set chord/secant
-        mat_rot = mathutils.Matrix.Rotation(math.radians(90.0/self.wing_elements), 4, eb[def_bone].x_axis)
+        mat_rot = mathutils.Matrix.Rotation(math.radians(90.0/self.wing_elements), 4, eb[self.radial_bone].x_axis)
         eb[def_bone].tail = (mat_rot * eb[def_bone].vector) + eb[def_bone].head
         #print('super_ring.make_deform tail after ', eb[def_bone].tail)
         def_chain += [def_bone]
@@ -173,7 +175,7 @@ class Rig:
             def_bone = copy_bone_simple( self.obj, prev_bone, def_name)
             put_bone(self.obj, def_bone,  eb[ prev_bone ].tail)
             # 3rd further elements go with full angle turn in the next chord/secant
-            mat_rot = mathutils.Matrix.Rotation(math.radians(180.0/self.wing_elements), 4, eb[def_bone].x_axis)
+            mat_rot = mathutils.Matrix.Rotation(math.radians(180.0/self.wing_elements), 4, eb[self.radial_bone].x_axis)
             eb[def_bone].tail = (mat_rot * eb[def_bone].vector) + eb[def_bone].head
             #print('super_ring.make_deform tail after ', eb[def_bone].tail)
             def_chain += [def_bone]
@@ -185,10 +187,10 @@ class Rig:
         def_bone = copy_bone_simple( self.obj, prev_bone, def_name)
         put_bone(self.obj, def_bone,  eb[ prev_bone ].tail)
         # 1st right angle turn to the tangent of the circular system
-        mat_rot = mathutils.Matrix.Rotation(math.radians(-90.0), 4, eb[def_bone].x_axis)
+        mat_rot = mathutils.Matrix.Rotation(math.radians(-90.0), 4, eb[self.radial_bone].x_axis)
         eb[def_bone].tail = (mat_rot * eb[def_bone].vector) + eb[def_bone].head
         # 2nd half angle turn to set chord/secant
-        mat_rot = mathutils.Matrix.Rotation(math.radians(-90.0/self.wing_elements), 4, eb[def_bone].x_axis)
+        mat_rot = mathutils.Matrix.Rotation(math.radians(-90.0/self.wing_elements), 4, eb[self.radial_bone].x_axis)
         eb[def_bone].tail = (mat_rot * eb[def_bone].vector) + eb[def_bone].head
         #print('super_ring.make_deform tail after ', eb[def_bone].tail)
         def_chain += [def_bone]
@@ -200,7 +202,7 @@ class Rig:
             def_bone = copy_bone_simple( self.obj, prev_bone, def_name)
             put_bone(self.obj, def_bone,  eb[ prev_bone ].tail)
             # 3rd further elements go with full angle turn in the next chord/secant
-            mat_rot = mathutils.Matrix.Rotation(math.radians(-180.0/self.wing_elements), 4, eb[def_bone].x_axis)
+            mat_rot = mathutils.Matrix.Rotation(math.radians(-180.0/self.wing_elements), 4, eb[self.radial_bone].x_axis)
             eb[def_bone].tail = (mat_rot * eb[def_bone].vector) + eb[def_bone].head
             #print('super_ring.make_deform tail after ', eb[def_bone].tail)
             def_chain += [def_bone]
