@@ -11,6 +11,7 @@ class Rig:
         """ Initialize super_limb rig wrapper class """
         self.obj = obj
         self.params = params
+        print('limbs.super_limb on %s' % bone_name)
 
         if params.limb_type == 'arm':
             self.limb = armRig(obj, bone_name, params)
@@ -21,6 +22,7 @@ class Rig:
 
     def generate(self):
 
+        print('limbs.super_limb.generate pass to limb %s' % self.params.limb_type)
         return self.limb.generate()
 
     @staticmethod
@@ -107,6 +109,13 @@ def add_parameters(params):
         description = "Layers for the FK controls to be on",
         default     = tuple( [ i == 1 for i in range(0, 32) ] )
         )
+    # POE bones on the foot: switchable property
+    params.tweak_foot_bend = bpy.props.BoolProperty(
+        name='tweak_foot_bend',
+        default=False,
+        description="Tweak foot bending"
+    )
+
 
 
 def parameters_ui(layout, params):
@@ -170,6 +179,9 @@ def parameters_ui(layout, params):
             if bone_layers[i]:
                 icon = "LAYER_ACTIVE"
             row.prop(params, layer + "_layers", index=i, toggle=True, text="", icon=icon)
+    # POE bones on the foot: switchable property
+    r = layout.row()
+    r.prop(params, "tweak_foot_bend", text="Tweak foot bending")
 
 
 def create_sample(obj):

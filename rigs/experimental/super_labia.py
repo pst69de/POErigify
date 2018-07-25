@@ -23,23 +23,22 @@ class Rig:
     def __init__(self, obj, bone_name, params):
         """ A simplified version of the torso rig. Basically a connected-DEF chain of bones """
 
-        eb = obj.data.edit_bones
-
+        # identify
         self.obj = obj
+        print('!!!WIP!!! super_labia on %s' % bone_name)
+        eb = obj.data.edit_bones
         self.org_bones = [bone_name] + connected_children_names(obj, bone_name)
-        print('Bones in labia %s' % bone_name)
-        for aName in self.org_bones:
-            print('Bone %s' % aName)
+        # DEBUG: display names of inherited childs
+        for aName in self.org_bones[1:]:
+            print('super_labia Bone %s' % aName)
         self.params = params
         self.spine_length = sum([eb[b].length for b in self.org_bones])
         self.bbones = params.bbones
-
         # Assign values to tweak layers props if opted by user
         if params.tweak_extra_layers:
             self.tweak_layers = list(params.tweak_layers)
         else:
             self.tweak_layers = None
-
         # Report error of user created less than the minimum of 4 bones for rig
         if len(self.org_bones) <= 2:
             raise MetarigError(

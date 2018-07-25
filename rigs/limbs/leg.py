@@ -10,6 +10,9 @@ from ...utils import create_circle_widget, create_sphere_widget, create_line_wid
 from ...utils import MetarigError, make_mechanism_name, org
 from ...utils import create_limb_widget, connected_children_names
 from ...utils import align_bone_y_axis, align_bone_x_axis, align_bone_z_axis
+# POE bones
+from ...utils import copy_bone_simple, strip_def, mch, create_bone_widget
+# over POE bones
 from rna_prop_ui import rna_idprop_ui_prop_get
 from ..widgets import create_ikarrow_widget
 from math import trunc, pi
@@ -36,6 +39,7 @@ class Rig:
         """ Initialize leg rig and key rig properties """
         self.obj = obj
         self.params = params
+        print('limbs.super_limb.leg on %s' % bone_name)
 
         self.org_bones = list(
             [bone_name] + connected_children_names(obj, bone_name)
@@ -57,9 +61,12 @@ class Rig:
             self.fk_layers = list(params.fk_layers)
         else:
             self.fk_layers = None
+        # POE bones on the foot: switchable property
+        self.tweak_foot_bend = params.tweak_foot_bend
 
     def orient_org_bones(self):
 
+        print('limbs.super_limb.leg.orient_org_bones')
         bpy.ops.object.mode_set(mode='EDIT')
         eb = self.obj.data.edit_bones
 
@@ -116,6 +123,7 @@ class Rig:
 
     def create_parent(self):
 
+        print('limbs.super_limb.leg.create_parent')
         org_bones = self.org_bones
 
         bpy.ops.object.mode_set(mode='EDIT')
@@ -181,8 +189,9 @@ class Rig:
         return [mch, main_parent]
 
     def create_tweak(self):
-        org_bones = self.org_bones
 
+        print('limbs.super_limb.leg.create_tweak')
+        org_bones = self.org_bones
         bpy.ops.object.mode_set(mode ='EDIT')
         eb = self.obj.data.edit_bones
 
@@ -198,10 +207,12 @@ class Rig:
                     # MCH
                     name = get_bone_name( strip_org(org), 'mch', 'tweak' )
                     mch = copy_bone( self.obj, org, name )
+                    print('limbs.super_limb.leg.create_tweak generated %s' % mch)
 
                     # CTRL
                     name = get_bone_name( strip_org(org), 'ctrl', 'tweak' )
                     ctrl = copy_bone( self.obj, org, name )
+                    print('limbs.super_limb.leg.create_tweak generated %s' % ctrl)
 
                     eb[ mch  ].length /= self.segments
                     eb[ ctrl ].length /= self.segments
@@ -222,6 +233,7 @@ class Rig:
             else: # Last limb bone - is not subdivided
                 name = get_bone_name( strip_org(org), 'mch', 'tweak' )
                 mch = copy_bone( self.obj, org_bones[i-1], name )
+                print('limbs.super_limb.leg.create_tweak generated %s' % mch)
                 eb[ mch ].length = eb[org].length / 4
                 put_bone(
                     self.obj,
@@ -231,6 +243,7 @@ class Rig:
 
                 ctrl = get_bone_name( strip_org(org), 'ctrl', 'tweak' )
                 ctrl = copy_bone( self.obj, org, ctrl )
+                print('limbs.super_limb.leg.create_tweak generated %s' % ctrl)
                 eb[ ctrl ].length = eb[org].length / 2
 
                 tweaks['mch']  += [ mch  ]
@@ -299,6 +312,8 @@ class Rig:
         return tweaks
 
     def create_def(self, tweaks):
+
+        print('limbs.super_limb.leg.create_def')
         org_bones = self.org_bones
 
         bpy.ops.object.mode_set(mode ='EDIT')
@@ -311,6 +326,7 @@ class Rig:
                 for j in range(self.segments):
                     name = get_bone_name(strip_org(org), 'def')
                     def_name = copy_bone(self.obj, org, name)
+                    print('limbs.super_limb.leg.create_def %s' % def_name)
 
                     eb[def_name].length /= self.segments
 
@@ -323,6 +339,7 @@ class Rig:
             else:
                 name = get_bone_name(strip_org(org), 'def')
                 def_name = copy_bone(self.obj, org, name)
+                print('limbs.super_limb.leg.create_def %s' % def_name)
                 def_bones.append(def_name)
 
         # Parent deform bones
@@ -404,6 +421,8 @@ class Rig:
         return def_bones
 
     def create_ik(self, parent):
+
+        print('limbs.super_limb.leg.create_ik')
         org_bones = self.org_bones
 
         bpy.ops.object.mode_set(mode='EDIT')
@@ -533,6 +552,8 @@ class Rig:
         }
 
     def create_fk(self, parent):
+
+        print('limbs.super_limb.leg.create_fk')
         org_bones = self.org_bones.copy()
 
         bpy.ops.object.mode_set(mode='EDIT')
@@ -581,6 +602,8 @@ class Rig:
         return {'ctrl': ctrls, 'mch': mch}
 
     def org_parenting_and_switch(self, org_bones, ik, fk, parent):
+
+        print('limbs.super_limb.leg.org_parenting_and_switch')
         bpy.ops.object.mode_set(mode='EDIT')
         eb = self.obj.data.edit_bones
         # re-parent ORGs in a connected chain
@@ -629,6 +652,8 @@ class Rig:
                 pb_parent.path_from_id() + '[' + '"' + prop.name + '"' + ']'
 
     def create_leg(self, bones):
+
+        print('limbs.super_limb.leg.create_leg')
         org_bones = list(
             [self.org_bones[0]] + connected_children_names(self.obj, self.org_bones[0])
         )
@@ -641,6 +666,7 @@ class Rig:
         # Create toes def bone
         toes_def = get_bone_name(org_bones[-1], 'def')
         toes_def = copy_bone( self.obj, org_bones[-1], toes_def )
+        print('limbs.super_limb.leg.create_leg generated toes_def %s' % toes_def)
 
         eb[ toes_def ].use_connect = False
         eb[ toes_def ].parent      = eb[ bones['def'][-1] ]
@@ -653,6 +679,7 @@ class Rig:
         # Create IK leg control
         ctrl = get_bone_name(org_bones[2], 'ctrl', 'ik')
         ctrl = copy_bone(self.obj, org_bones[2], ctrl)
+        print('limbs.super_limb.leg.create_leg generated ctrl %s' % ctrl)
 
         # clear parent (so that rigify will parent to root)
         eb[ctrl].parent = None
@@ -660,17 +687,20 @@ class Rig:
 
         # MCH for ik control
         ctrl_socket = copy_bone(self.obj, org_bones[2], get_bone_name( org_bones[2], 'mch', 'ik_socket'))
+        print('limbs.super_limb.leg.create_leg generated ctrl_socket %s' % ctrl_socket)
         eb[ctrl_socket].tail = eb[ctrl_socket].head + 0.8*(eb[ctrl_socket].tail-eb[ctrl_socket].head)
         eb[ctrl_socket].parent = None
         eb[ctrl].parent = eb[ctrl_socket]
 
         # MCH for pole ik control
         ctrl_pole_socket = copy_bone(self.obj, org_bones[2], get_bone_name(org_bones[2], 'mch', 'pole_ik_socket'))
+        print('limbs.super_limb.leg.create_leg generated ctrl_pole_socket %s' % ctrl_pole_socket)
         eb[ctrl_pole_socket].tail = eb[ctrl_pole_socket].head + 0.8 * (eb[ctrl_pole_socket].tail - eb[ctrl_pole_socket].head)
         eb[ctrl_pole_socket].parent = None
         eb[pole_target].parent = eb[ctrl_pole_socket]
 
         ctrl_root = copy_bone(self.obj, org_bones[2], get_bone_name( org_bones[2], 'mch', 'ik_root'))
+        print('limbs.super_limb.leg.create_leg generated ctrl_root %s' % ctrl_root)
         eb[ctrl_root].tail = eb[ctrl_root].head + 0.7*(eb[ctrl_root].tail-eb[ctrl_root].head)
         eb[ctrl_root].use_connect = False
         eb[ctrl_root].parent = eb['root']
@@ -678,6 +708,7 @@ class Rig:
         if eb[org_bones[0]].parent:
             leg_parent = eb[org_bones[0]].parent
             ctrl_parent = copy_bone(self.obj, org_bones[2], get_bone_name( org_bones[2], 'mch', 'ik_parent'))
+            print('limbs.super_limb.leg.create_leg generated ctrl_parent %s' % ctrl_parent)
             eb[ctrl_parent].tail = eb[ctrl_parent].head + 0.6*(eb[ctrl_parent].tail-eb[ctrl_parent].head)
             eb[ctrl_parent].use_connect = False
             if eb[org_bones[0]].parent_recursive:
@@ -689,6 +720,7 @@ class Rig:
 
         mch_name = get_bone_name(strip_org(org_bones[0]), 'mch', 'parent_socket')
         mch_main_parent = copy_bone(self.obj, org_bones[0], mch_name)
+        print('limbs.super_limb.leg.create_leg generated mch_main_parent %s' % mch_main_parent)
         eb[mch_main_parent].length = eb[org_bones[0]].length / 12
         eb[mch_main_parent].parent = eb[bones['parent']]
         eb[mch_main_parent].roll = 0.0
@@ -697,6 +729,7 @@ class Rig:
         # Create heel ctrl bone
         heel = get_bone_name(org_bones[2], 'ctrl', 'heel_ik')
         heel = copy_bone(self.obj, org_bones[2], heel)
+        print('limbs.super_limb.leg.create_leg generated heel %s' % heel)
 
         ax = eb[org_bones[2]].head - eb[org_bones[2]].tail
         ax[2] = 0
@@ -717,7 +750,6 @@ class Rig:
             eb[ctrl].tail[2] = eb[ctrl].head[2]
             eb[ctrl].roll = 0
 
-
         # Parent
         eb[ heel ].use_connect = False
         eb[ heel ].parent      = eb[ ctrl ]
@@ -736,6 +768,7 @@ class Rig:
         # roll1 MCH bone
         roll1_mch = get_bone_name(tmp_heel, 'mch', 'roll')
         roll1_mch = copy_bone(self.obj, org_bones[2], roll1_mch)
+        print('limbs.super_limb.leg.create_leg generated roll1_mch %s' % roll1_mch)
 
         # clear parent
         eb[roll1_mch].use_connect = False
@@ -750,6 +783,7 @@ class Rig:
         # Create 2nd roll mch, and two rock mch bones
         roll2_mch = get_bone_name(tmp_heel, 'mch', 'roll')
         roll2_mch = copy_bone(self.obj, org_bones[3], roll2_mch)
+        print('limbs.super_limb.leg.create_leg generated roll2_mch %s' % roll2_mch)
 
         eb[roll2_mch].use_connect = False
         eb[roll2_mch].parent = None
@@ -765,6 +799,7 @@ class Rig:
         # Rock MCH bones
         rock1_mch = get_bone_name( tmp_heel, 'mch', 'rock' )
         rock1_mch = copy_bone( self.obj, tmp_heel, rock1_mch )
+        print('limbs.super_limb.leg.create_leg generated rock1_mch %s' % rock1_mch)
 
         eb[ rock1_mch ].use_connect = False
         eb[ rock1_mch ].parent      = None
@@ -775,6 +810,7 @@ class Rig:
 
         rock2_mch = get_bone_name( tmp_heel, 'mch', 'rock' )
         rock2_mch = copy_bone( self.obj, tmp_heel, rock2_mch )
+        print('limbs.super_limb.leg.create_leg generated rock2_mch %s' % rock2_mch)
 
         eb[ rock2_mch ].use_connect = False
         eb[ rock2_mch ].parent      = None
@@ -800,12 +836,48 @@ class Rig:
 
         toe_mch = get_bone_name(toe, 'mch')
         toe_mch = copy_bone(self.obj, toe, toe_mch)
+        print('limbs.super_limb.leg.create_leg generated toe_mch %s' % toe_mch)
         eb[toe_mch].length /= 3
         eb[toe_mch].parent = eb[self.org_bones[2]]
         eb[toe].use_connect = False
         eb[toe].parent = eb[toe_mch]
 
+        # create POE bones
+        # POE bones is a set of bones controling the bending of the DEF-foot
+        if self.tweak_foot_bend:
+            # tweak_tail_foot.X is copy of DEF-foot.X and parented connected
+            def_foot = bones['def'][-2]
+            tweak_tail_foot = 'tweak_tail_' + strip_def(def_foot)
+            tweak_tail_foot = copy_bone_simple(self.obj, def_foot, tweak_tail_foot)
+            put_bone(self.obj, tweak_tail_foot, eb[def_foot].tail)
+            eb[tweak_tail_foot].length /= 2
+            eb[tweak_tail_foot].use_connect = True
+            eb[tweak_tail_foot].parent = eb[def_foot]
+            # tweak_head_foot.X is copy of MCH-heel.02_roll.L and parented connected
+            # roll1_mch is source
+            tweak_head_foot = 'tweak_head_' + strip_def(def_foot)
+            tweak_head_foot = copy_bone_simple(self.obj, roll1_mch, tweak_head_foot)
+            put_bone(self.obj, tweak_head_foot, eb[tweak_head_foot].tail)
+            eb[tweak_head_foot].length /= 2
+            eb[tweak_head_foot].use_connect = True
+            eb[tweak_head_foot].parent = eb[roll1_mch]
+            # MCH-tweak_head_foot.X is a flip copy of tweak_head_foot.X and parented connected
+            # tweak_head_foot is source
+            mch_head_foot = mch(tweak_head_foot)
+            mch_head_foot = copy_bone_simple(self.obj, tweak_head_foot, mch_head_foot)
+            flip_bone(self.obj, mch_head_foot)
+            eb[mch_head_foot].use_connect = True
+            eb[mch_head_foot].parent = eb[tweak_head_foot]
+            eb[mch_head_foot].use_inherit_rotation = True
+            # check for bbone_segments on def_foot (at least 5)
+            if eb[def_foot].bbone_segments < 5:
+                eb[def_foot].bbone_segments = 5
+            # ease_in & out are defined in EditBone, not PoseBone :(
+            eb[def_foot].bbone_in = 1.0
+            eb[def_foot].bbone_out = 1.0
+            # over POE bones
         # Constrain rock and roll MCH bones
+        print('limbs.super_limb.leg.create_leg make constraints')
         make_constraint( self, roll1_mch, {
             'constraint'   : 'COPY_ROTATION',
             'subtarget'    : heel,
@@ -1007,6 +1079,31 @@ class Rig:
         # Add ballsocket widget to heel
         create_ballsocket_widget(self.obj, heel, bone_transform_name=None)
 
+        # POE bones constraints, widgets & Layers
+        if self.tweak_foot_bend:
+            # create widgets
+            create_bone_widget(self.obj, tweak_tail_foot)
+            create_bone_widget(self.obj, tweak_head_foot)
+            # transform locks
+            pb[tweak_tail_foot].lock_location = True, True, True
+            pb[tweak_tail_foot].lock_rotation = False, True, True
+            pb[tweak_tail_foot].lock_rotation_w = False
+            pb[tweak_tail_foot].lock_scale = True, True, True
+            pb[tweak_head_foot].lock_location = True, True, True
+            pb[tweak_head_foot].lock_rotation = False, True, True
+            pb[tweak_head_foot].lock_rotation_w = False
+            pb[tweak_head_foot].lock_scale = True, True, True
+            # add handle in & out to DEF-foot.X
+            # (segments were defined in the eb section above)
+            pb[def_foot].use_bbone_custom_handles = True
+            pb[def_foot].bbone_custom_handle_start = pb[mch_head_foot]
+            pb[def_foot].bbone_custom_handle_end = pb[tweak_tail_foot]
+            # if, shift POE tweaks to tweak_layers
+            if self.tweak_layers:
+                pb[tweak_tail_foot].bone.layers = self.tweak_layers
+                pb[tweak_head_foot].bone.layers = self.tweak_layers
+        # over POE bones constraints, widgets & Layers
+
         bpy.ops.object.mode_set(mode='EDIT')
         eb = self.obj.data.edit_bones
 
@@ -1084,6 +1181,7 @@ class Rig:
 
     def create_drivers(self, bones):
 
+        print('limbs.super_limb.leg.create_drivers')
         bpy.ops.object.mode_set(mode='OBJECT')
         pb = self.obj.pose.bones
 
@@ -1352,6 +1450,8 @@ class Rig:
         return names
 
     def generate(self):
+
+        print('limbs.super_limb.leg.generate')
         bpy.ops.object.mode_set(mode='EDIT')
         eb = self.obj.data.edit_bones
 

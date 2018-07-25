@@ -73,7 +73,7 @@ class Rig:
     def __init__(self, obj, bone_name, params):
         # constructor for this class, in here the local parameters are defined
         self.obj = obj
-        print('super_template on %s' % bone_name)
+        print('!!!WIP!!! super_template on %s' % bone_name)
         # stretch_bone is the main element of this system
         self.stretch_bone = bone_name
         # just in case we have a suffix
@@ -370,7 +370,7 @@ class Rig:
             eb[ org_bones[1]].parent = eb[all_bones['control'][-1]]
         # and out
 
-    # helper for making constraints 
+    # helper for making constraints
     def make_constraint(self, bone, constraint):
         bpy.ops.object.mode_set(mode='OBJECT')
         pb = self.obj.pose.bones

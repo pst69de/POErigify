@@ -35,6 +35,7 @@ class Rig:
         """ Initialize arm rig and key rig properties """
         self.obj = obj
         self.params = params
+        print('limbs.super_limb.arm on %s' % bone_name)
 
         self.org_bones = list(
             [bone_name] + connected_children_names(obj, bone_name)
@@ -59,6 +60,7 @@ class Rig:
 
     def orient_org_bones(self):
 
+        print('limbs.super_limb.arm.orient_org_bones')
         bpy.ops.object.mode_set(mode='EDIT')
         eb = self.obj.data.edit_bones
 
@@ -89,6 +91,7 @@ class Rig:
 
     def create_parent(self):
 
+        print('limbs.super_limb.arm.create_parent')
         org_bones = self.org_bones
 
         bpy.ops.object.mode_set(mode='EDIT')
@@ -154,6 +157,8 @@ class Rig:
         return [mch, main_parent]
 
     def create_tweak(self):
+
+        print('limbs.super_limb.arm.create_tweak')
         org_bones = self.org_bones
 
         bpy.ops.object.mode_set(mode ='EDIT')
@@ -272,6 +277,8 @@ class Rig:
         return tweaks
 
     def create_def(self, tweaks):
+
+        print('limbs.super_limb.arm.create_def')
         org_bones = self.org_bones
 
         bpy.ops.object.mode_set(mode ='EDIT')
@@ -333,7 +340,6 @@ class Rig:
         self.obj.data.bones[ def_bones[-1] ].bbone_in = 0.0
         self.obj.data.bones[ def_bones[-1] ].bbone_out = 0.0
 
-
         # Rubber hose drivers
         pb = self.obj.pose.bones
         for i,t in enumerate( tweaks[1:-1] ):
@@ -377,6 +383,8 @@ class Rig:
         return def_bones
 
     def create_ik(self, parent):
+
+        print('limbs.super_limb.arm.create_ik')
         org_bones = self.org_bones
 
         bpy.ops.object.mode_set(mode ='EDIT')
@@ -506,6 +514,8 @@ class Rig:
         }
 
     def create_fk(self, parent):
+
+        print('limbs.super_limb.arm.create_fk')
         org_bones = self.org_bones.copy()
 
         bpy.ops.object.mode_set(mode='EDIT')
@@ -554,6 +564,8 @@ class Rig:
         return {'ctrl': ctrls, 'mch': mch}
 
     def org_parenting_and_switch(self, org_bones, ik, fk, parent):
+
+        print('limbs.super_limb.arm.org_parenting_and_switch')
         bpy.ops.object.mode_set(mode='EDIT')
         eb = self.obj.data.edit_bones
         # re-parent ORGs in a connected chain
@@ -602,6 +614,8 @@ class Rig:
                 pb_parent.path_from_id() + '[' + '"' + prop.name + '"' + ']'
 
     def create_arm(self, bones):
+
+        print('limbs.super_limb.arm.create_arm')
         org_bones = self.org_bones
 
         bpy.ops.object.mode_set(mode='EDIT')
@@ -764,6 +778,7 @@ class Rig:
 
     def create_drivers(self, bones):
 
+        print('limbs.super_limb.arm.create_drivers')
         bpy.ops.object.mode_set(mode='OBJECT')
         pb = self.obj.pose.bones
 
@@ -1029,6 +1044,8 @@ class Rig:
         return names
 
     def generate(self):
+
+        print('limbs.super_limb.arm.generate')
         bpy.ops.object.mode_set(mode='EDIT')
         eb = self.obj.data.edit_bones
 
