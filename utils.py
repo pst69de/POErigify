@@ -761,6 +761,42 @@ def create_neck_tweak_widget(rig, bone_name, size=1.0, bone_transform_name=None)
         mesh.from_pydata(verts, edges, [])
         mesh.update()
 
+# POE 2018-07-25 create_dome_widget
+def create_dome_widget(rig, bone_name, size=1.0, bone_transform_name=None):
+    obj = create_widget(rig, bone_name, bone_transform_name)
+    if obj != None:
+        verts = [
+            (1.0000*size,-0.0000*size,0.0000*size)
+            , (0.0000*size,-0.0000*size,1.0000*size)
+			, (-1.0000*size, 0.0000*size, -0.0000*size)
+			, (0.0000*size, 0.0000*size, -1.0000*size)
+			, (0.0000*size, 0.3827*size, -0.9239*size)
+			, (0.0000*size, 0.0000*size, -1.0000*size)
+			, (0.0000*size, -0.0000*size, 1.0000*size)
+			, (0.0000*size, 0.3827*size, 0.9239*size)
+			, (0.0000*size, 0.7071*size, 0.7071*size)
+			, (0.0000*size, 0.9239*size, 0.3827*size)
+			, (0.0000*size, 1.0000*size, 0.0000*size)
+			, (0.0000*size, 0.9239*size, -0.3827*size)
+			, (0.0000*size, 0.7071*size, -0.7071*size)
+			, (0.7071*size, 0.7071*size, 0.0000*size)
+			, (0.3827*size, 0.9239*size, 0.0000*size)
+			, (0.0000*size, 1.0000*size, 0.0000*size)
+			, (-0.3827*size, 0.9239*size, 0.0000*size)
+			, (-0.7071*size, 0.7071*size, 0.0000*size)
+			, (-0.9239*size, 0.3827*size, 0.0000*size)
+			, (-1.0000*size, 0.0000*size, 0.0000*size)
+			, (1.0000*size, 0.0000*size, -0.0000*size)
+			, (0.9239*size, 0.3827*size, -0.0000*size)
+			, ]
+        edges = [(4, 12), (4, 5), (6, 7), (7, 8), (8, 9), (9, 10), (10, 11), (11, 12), (13, 14), (14, 15), (15, 16), (16, 17), (17, 18), (18, 19), (20, 21), (13, 21), ]
+        mesh = obj.data
+        mesh.from_pydata(verts, edges, [])
+        mesh.update()
+        mesh.update()
+        return obj
+    else:
+        return None
 
 #=============================================
 # Math
@@ -1128,32 +1164,33 @@ def write_metarig(obj, layers=False, func_name="create", groups=False):
 
     return "\n".join(code)
 
-
+# POE 2018-07-25 widgets normally are edge represetants so eliminate faces from
+#                mesh building and nicen Vertex list
 def write_widget(obj):
     """ Write a mesh object as a python script for widget use.
     """
     script = ""
     script += "def create_thing_widget(rig, bone_name, size=1.0, bone_transform_name=None):\n"
-    script += "    obj = create_widget(rig, bone_name, bone_transform_name)\n"
-    script += "    if obj != None:\n"
+    script += "\tobj = create_widget(rig, bone_name, bone_transform_name)\n"
+    script += "\tif obj != None:\n"
 
     # Vertices
     if len(obj.data.vertices) > 0:
-        script += "        verts = ["
+        script += "\t\tverts = ["
         for v in obj.data.vertices:
-            script += "(" + str(v.co[0]) + "*size, " + str(v.co[1]) + "*size, " + str(v.co[2]) + "*size), "
+            script += "(" + ("%.4f" % v.co[0]) + "*size, " + ("%.4f" % v.co[1]) + "*size, " + ("%.4f" % v.co[2]) + "*size)\n\t\t\t, "
         script += "]\n"
 
     # Edges
     if len(obj.data.edges) > 0:
-        script += "        edges = ["
+        script += "\t\tedges = ["
         for e in obj.data.edges:
             script += "(" + str(e.vertices[0]) + ", " + str(e.vertices[1]) + "), "
         script += "]\n"
 
     # Faces
     if len(obj.data.polygons) > 0:
-        script += "        faces = ["
+        script += "\t\tfaces = ["
         for f in obj.data.polygons:
             script += "("
             for v in f.vertices:
@@ -1162,13 +1199,13 @@ def write_widget(obj):
         script += "]\n"
 
     # Build mesh
-    script += "\n        mesh = obj.data\n"
-    script += "        mesh.from_pydata(verts, edges, faces)\n"
-    script += "        mesh.update()\n"
-    script += "        mesh.update()\n"
-    script += "        return obj\n"
-    script += "    else:\n"
-    script += "        return None\n"
+    script += "\n\t\tmesh = obj.data\n"
+    script += "\t\tmesh.from_pydata(verts, edges, [])\n"
+    script += "\t\tmesh.update()\n"
+    script += "\t\tmesh.update()\n"
+    script += "\t\treturn obj\n"
+    script += "\telse:\n"
+    script += "\t\treturn None\n"
 
     return script
 
