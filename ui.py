@@ -32,6 +32,8 @@ from .rigs.utils import get_limb_generated_names
 from . import rig_lists
 from . import generate
 from . import rot_mode
+# POE 2018-07-27 Pose exporter and importer
+from . import pose_expimp
 
 
 class DATA_PT_rigify_buttons(bpy.types.Panel):
@@ -1347,6 +1349,8 @@ def register():
     bpy.utils.register_class(OBJECT_OT_Rot2Pole)
 
     rot_mode.register()
+    # POE 2018-07-27 Pose exporter and importer
+    pose_expimp.register()
 
 
 def unregister():
@@ -1383,4 +1387,5 @@ def unregister():
     bpy.utils.unregister_class(OBJECT_OT_Rot2Pole)
 
     rot_mode.unregister()
-
+    # POE 2018-07-27 Pose exporter and importer
+    pose_expimp.unregister()
