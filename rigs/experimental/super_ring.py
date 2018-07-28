@@ -38,7 +38,7 @@ import math
 from ...utils import copy_bone, copy_bone_simple, put_bone
 from ...utils import org, strip_org, mch, strip_mch, deformer, strip_def
 from ...utils import connected_children_names
-from ...utils import create_sphere_widget
+from ...utils import create_sphere_widget, create_bone_widget
 from ...utils import create_widget, create_circle_widget
 from ...utils import MetarigError
 from rna_prop_ui import rna_idprop_ui_prop_get
@@ -57,16 +57,23 @@ class Rig:
         self.suffix = ''
         if bone_name[-2].upper() in ['.L','.R','.F','.B','.U','.D']:
             self.suffix = bone_name[-2]
+        self.params = params
+        eb = obj.data.edit_bones
         # this list may be modified by head or tail params
         self.org_bones = [bone_name]
-        # + bone_name.parent
-        #print('super_ring params.guide_in_bone %s' % params.guide_in_bone)
+        # sizing_bone defined ?
         if params.sizing_bone:
             self.org_bones += [org(params.sizing_bone)]
             self.sizing_bone = org(params.sizing_bone)
-        self.params = params
         # number of stretchy elements
         self.wing_elements = params.wing_elements
+        # + self.parent_to : parent for the structure
+        self.parent_to = None
+        if eb[bone_name].parent:
+            self.parent_to = eb[bone_name].parent.name
+        else:
+            if params.sizing_bone and eb[params.sizing_bone].parent:
+                self.parent_to = eb[params.sizing_bone].parent.name
         # not yet: tweaks on extra layer
         #if params.tweak_extra_layers:
         #    self.tweak_layers = list(params.tweak_layers)
@@ -105,10 +112,17 @@ class Rig:
             name = org_bones[1]
             ctrl_bone = copy_bone(self.obj,name,strip_org(name))
             ctrl_chain.append(ctrl_bone)
+        else:
+            # alternative sizing by radial_bone
+            name = org_bones[0]
+            ctrl_bone = copy_bone(self.obj,name,strip_org(name))
+            ctrl_chain.append(ctrl_bone)
         # Make widgets
         bpy.ops.object.mode_set(mode ='OBJECT')
-        for ctrl in ctrl_chain:
-            create_circle_widget(self.obj, ctrl, radius=1, head_tail=0)
+        if self.sizing_bone:
+            create_circle_widget(self.obj, ctrl_chain[0], radius=1, head_tail=0)
+        else:
+            create_bone_widget(self.obj, ctrl_chain[0], radius=1, head_tail=0)
         return ctrl_chain
 
     def make_tweaks(self, mch_chain):
@@ -238,20 +252,30 @@ class Rig:
         ctrls   = all_bones['control']
         tweaks  = all_bones['tweak'  ]
         deforms = all_bones['deform' ]
-        # copy scale (xz) from self.sizing_bone
-        # maybe COPY_TRANSFORMS
-        print('super_ring.make_constraints %s copy_scale %s' % (self.radial_bone,self.sizing_bone))
-        self.make_constraint( self.radial_bone, {
-            'constraint': 'COPY_SCALE'
-            , 'subtarget' : strip_org(self.sizing_bone)
-            , 'use_y' : True
-            } )
-        # lock rotation, translation on control
-        pbone = pb[strip_org(self.sizing_bone)]
-        pbone.lock_location = (True, True, True)
-        pbone.lock_rotation = (True, True, True)
-        pbone.lock_rotation_w = True
-        pbone.lock_scale = (False, False, False)
+        if self.sizing_bone:
+            # copy scale (xz) from self.sizing_bone
+            # maybe COPY_TRANSFORMS
+            print('super_ring.make_constraints %s copy_scale %s' % (self.radial_bone,self.sizing_bone))
+            self.make_constraint( self.radial_bone, {
+                'constraint': 'COPY_SCALE'
+                , 'subtarget' : strip_org(self.sizing_bone)
+                , 'use_y' : True
+                } )
+            # lock rotation, translation on control
+            pbone = pb[strip_org(self.sizing_bone)]
+            pbone.lock_location = (True, True, True)
+            pbone.lock_rotation = (True, True, True)
+            pbone.lock_rotation_w = True
+            pbone.lock_scale = (False, False, False)
+        else:
+            # alternative sizing on radial_bone
+            # lock rotation, translation on control
+            pbone = pb[strip_org(self.radial_bone)]
+            pbone.lock_location = (True, True, True)
+            pbone.lock_rotation = (True, True, True)
+            pbone.lock_rotation_w = True
+            pbone.lock_scale = (False, False, False)
+
         # and out
 
     def parent_bones(self, all_bones):
@@ -263,16 +287,17 @@ class Rig:
         bpy.ops.object.mode_set(mode ='EDIT')
         org_bones = self.org_bones
         eb        = self.obj.data.edit_bones
-
+        # parent system to parent_to (only if exists)
+        if self.parent_to:
+            eb[self.radial_bone].use_connect = False
+            eb[self.radial_bone].parent = eb[self.parent_to]
         # parent sizing_bone to radial_bone
-
         if self.sizing_bone:
             # guide_out control is 2nd
             print('super_ring.parent_bones parent %s to %s' % (self.sizing_bone,self.radial_bone))
             eb[self.sizing_bone].use_connect = False
             eb[self.sizing_bone].parent = eb[self.radial_bone]
             eb[self.sizing_bone].use_inherit_scale = False
-
         # Parent deform bones
         def_bones = all_bones['deform']
         prev_bone = self.radial_bone
