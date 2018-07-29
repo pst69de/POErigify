@@ -230,7 +230,7 @@ class Rig:
 
         owner_pb = pb[bone]
         const = owner_pb.constraints.new(constraint['constraint'])
-        const.target = self.obj
+        constraint['target'] = self.obj
         # testing
         #for p in [k for k in constraint.keys()]:
         #    print('super_stretcher.make_constraint constraint.keys() %s' % p)

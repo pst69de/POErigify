@@ -114,7 +114,10 @@ class ToolsPanel(bpy.types.Panel):
         # the extra layer for tweaks
         col = layout.column(align=True)
         row = col.row(align=True)
-        bone_layers = bpy.context.active_pose_bone.bone.layers[:]
+        if bpy.context.active_pose_bone:
+            bone_layers = bpy.context.active_pose_bone.bone.layers[:]
+        else:
+            bone_layers = bpy.context.active_object.pose.bones[0].bone.layers[:]
         for i in range(8):    # Layers 0-7
             icon = "NONE"
             if bone_layers[i]:
@@ -166,7 +169,7 @@ class POSE_OT_expimp_export(bpy.types.Operator):
 
     @classmethod
     def poll(self, context):
-        return (context.object.type == 'ARMATURE' and context.mode == 'POSE' and context.active_object.data.get("rig_id"))
+        return (context.active_object.type == 'ARMATURE' and context.mode == 'POSE' and context.active_object.data.get("rig_id"))
 
     # on mouse up:
     def invoke(self, context, event):

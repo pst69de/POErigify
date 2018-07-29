@@ -377,7 +377,7 @@ class Rig:
 
         owner_pb = pb[bone]
         const = owner_pb.constraints.new(constraint['constraint'])
-        const.target = self.obj
+        constraint['target'] = self.obj
 
         # filter contraint props to those that actually exist in the current
         # type of constraint, then assign values to each
