@@ -74,6 +74,8 @@ class Rig:
         else:
             if params.sizing_bone and eb[params.sizing_bone].parent:
                 self.parent_to = eb[params.sizing_bone].parent.name
+        self.suffix_1stwing = params.suffix_1stwing
+        self.suffix_2ndwing = params.suffix_2ndwing
         # not yet: tweaks on extra layer
         #if params.tweak_extra_layers:
         #    self.tweak_layers = list(params.tweak_layers)
@@ -161,11 +163,14 @@ class Rig:
         eb = self.obj.data.edit_bones
         def_chain = []
         org_bones = self.org_bones
+        suffix1 = self.suffix_1stwing
+        suffix2 = self.suffix_2ndwing
         # from radial_bone make 2 wings
         ix = 1
         base_name = strip_org(self.radial_bone)
         prev_bone = self.radial_bone
-        def_name = deformer('%s.%03d' % (base_name,ix))
+        #def_name = deformer('%s.%03d' % (base_name,ix))
+        def_name = deformer('%s.%03d.%s' % (base_name,1,suffix1))
         print('super_ring.make_deform make %s' % def_name)
         def_bone = copy_bone_simple( self.obj, prev_bone, def_name)
         put_bone(self.obj, def_bone,  eb[ prev_bone ].tail)
@@ -184,7 +189,8 @@ class Rig:
         for i in range(1,self.wing_elements):
             prev_bone = def_bone
             ix += 1
-            def_name = deformer('%s.%03d' % (base_name,ix))
+            #def_name = deformer('%s.%03d' % (base_name,ix))
+            def_name = deformer('%s.%03d.%s' % (base_name,i+1,suffix1))
             print('super_ring.make_deform make %s' % def_name)
             def_bone = copy_bone_simple( self.obj, prev_bone, def_name)
             put_bone(self.obj, def_bone,  eb[ prev_bone ].tail)
@@ -196,7 +202,8 @@ class Rig:
         # same procedure the other way around
         prev_bone = self.radial_bone
         ix += 1
-        def_name = deformer('%s.%03d' % (base_name,ix))
+        #def_name = deformer('%s.%03d' % (base_name,ix))
+        def_name = deformer('%s.%03d.%s' % (base_name,1,suffix2))
         print('super_ring.make_deform make %s' % def_name)
         def_bone = copy_bone_simple( self.obj, prev_bone, def_name)
         put_bone(self.obj, def_bone,  eb[ prev_bone ].tail)
@@ -211,7 +218,8 @@ class Rig:
         for i in range(1,self.wing_elements):
             prev_bone = def_bone
             ix += 1
-            def_name = deformer('%s.%03d' % (base_name,ix))
+            #def_name = deformer('%s.%03d' % (base_name,ix))
+            def_name = deformer('%s.%03d.%s' % (base_name,i+1,suffix2))
             print('super_ring.make_deform make %s' % def_name)
             def_bone = copy_bone_simple( self.obj, prev_bone, def_name)
             put_bone(self.obj, def_bone,  eb[ prev_bone ].tail)
@@ -368,6 +376,18 @@ def add_parameters(params):
         min         = 1,
         description = 'Number of elements on 1 side of ring'
     )
+    # suffix for 1st wing
+    params.suffix_1stwing = bpy.props.StringProperty(
+        name = 'suffix_1stwing',
+        default = 'R',
+        description = "suffix for 1st wing (e.g. R or L)"
+        )
+    # suffix for 2nd wing
+    params.suffix_2ndwing = bpy.props.StringProperty(
+        name = 'suffix_2ndwing',
+        default = 'L',
+        description = "suffix for 2nd wing (e.g. L or R)"
+        )
     # no tweak bone set yet, maybe in future
     ## Setting up extra tweak layers
     ## do extra layer for tweaks
@@ -402,6 +422,12 @@ def parameters_ui(layout, params):
     # number of stretchy elements
     r = layout.row()
     r.prop(params, "wing_elements", text="Number elements in ring half")
+    # suffix for 1st wing
+    r = layout.row()
+    r.prop(params, "suffix_1stwing", text="1st wing suffix")
+    # suffix for 2nd wing
+    r = layout.row()
+    r.prop(params, "suffix_2ndwing", text="2nd wing suffix")
     # no tweak bone set yet, maybe in future
     ## do extra layer for tweaks
     #r = layout.row()
