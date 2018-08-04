@@ -97,6 +97,8 @@ class Rig:
         print('super_bulge len org_bones %d' % len(self.org_bones))
         # number of segments in the stretch elements
         self.bbone_segments = params.bbone_segments
+        # create bones to help adjust roll of bones
+        self.zhelper_bones = params.zhelper_bones
         # tweaks on extra layer ?
         if params.tweak_extra_layers:
             self.tweak_layers = list(params.tweak_layers)
@@ -140,6 +142,28 @@ class Rig:
         # and out
         return names
 
+    def gen_zhelper(self, bone_name):
+
+        eb = self.obj.data.edit_bones
+        center_bone = self.org_bones[0]
+        if self.zhelper_bones:
+            zhelper_name = mch('ZH-'+strip_mch(bone_name))
+            zhelper_name = copy_bone_simple(self.obj,center_bone,zhelper_name)
+            print('super_bulge.gen_zhelper %s' % zhelper_name)
+            eb[zhelper_name].use_connect = False
+            eb[zhelper_name].parent = eb[self.base_bone]
+            eb[zhelper_name].tail = eb[bone_name].head
+            eb[zhelper_name].length = eb[zhelper_name].length / 4;
+            put_to = eb[bone_name].tail
+            put_bone(self.obj,zhelper_name,put_to)
+        # and try adjust it here the same
+        zvec = (eb[ bone_name ].head - eb[center_bone].head)
+        #print('super_bulge.make_mechanics to vector',zvec)
+        #print('super_bulge.make_mechanics roll before',eb[ mch_name ].roll)
+        eb[ bone_name ].align_roll(zvec)
+        # and out
+        #return
+
     def make_mechanics(self):
 
         # construct mechanics of the bone system
@@ -170,14 +194,18 @@ class Rig:
             movedir = eb[border].head - eb[border].tail
             move_to = eb[border].head + movedir
             put_bone( self.obj, mch_name, move_to)
+            self.gen_zhelper(mch_name)
             mechs += [ mch_name ]
             # 2nd tail-guide_out
             mch_name = mch('T-' + strip_org(border))
             print('super_bulge.make_mechanics make %s' % mch_name)
             mch_name = copy_bone_simple( self.obj, border, mch_name)
             eb[ mch_name ].tail = eb[org_bones[0]].head
-            eb[ mch_name ].length /= 2
-            put_bone( self.obj, mch_name, eb[org_bones[0]].tail)
+            eb[ mch_name ].length = eb[ mch_name ].length / 2
+            put_to = eb[org_bones[0]].tail
+            put_bone( self.obj, mch_name, put_to)
+            self.gen_zhelper(mch_name)
+            print('super_bulge.make_mechanics made %s' % mch_name)
             mechs += [ mch_name ]
         # and out
         return mechs
@@ -257,6 +285,7 @@ class Rig:
             if ix >= ofs_border:
                 eb[def_bone].tail = eb[org_bones[0]].tail
                 eb[def_bone].bbone_segments = self.bbone_segments
+                self.gen_zhelper(def_bone)
             defs.append(def_bone)
         # and out
         return defs
@@ -281,9 +310,15 @@ class Rig:
         print('super_bulge.make_constraints')
         # test if above works out
         #return
+        bpy.ops.object.mode_set(mode ='EDIT')
+        eb = self.obj.data.edit_bones
+        #for ebone in eb:
+        #    print('DEBUG: eb %s' % ebone.name)
         bpy.ops.object.mode_set(mode ='OBJECT')
         org_bones = self.org_bones
         pb        = self.obj.pose.bones
+        #for pbone in pb:
+        #    print('DEBUG: pb %s' % pbone.name)
         mechs   = all_bones['mech'  ]
         ctrls   = all_bones['ctrl'  ]
         tweaks  = all_bones['tweak' ]
@@ -435,6 +470,12 @@ def add_parameters(params):
         min         = 3,
         description = 'Number of segments in bendies'
     )
+    # zhelper_bones to adjust bone roll after generation
+    params.zhelper_bones = bpy.props.BoolProperty(
+        name        = "zhelper_bones",
+        default     = True,
+        description = "Helper bones for adjusting bone roll to Z"
+        )
     # Setting up extra tweak layers
     # do extra layer for tweaks
     params.tweak_extra_layers = bpy.props.BoolProperty(
@@ -461,6 +502,9 @@ def parameters_ui(layout, params):
     # number of segments in the stretch elements
     r = layout.row()
     r.prop(params, "bbone_segments", text="Number segments in bendies")
+    # zhelper_bones to adjust bone roll after generation
+    r = layout.row()
+    r.prop(params, "zhelper_bones", text="ZHelper")
     # do extra layer for tweaks
     r = layout.row()
     r.prop(params, "tweak_extra_layers", text="Tweak extra")
