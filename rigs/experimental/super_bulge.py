@@ -16,17 +16,18 @@
 #
 #======================= END GPL LICENSE BLOCK ========================
 ###############################
-# super_dome rig class
+# super_bulge rig class
 # by Patrick O. Ehrmann
 # based on super_template.py
 # feel free to reuse on your own project
 #
-# super_dome is rig system to do a wobbly dome on a fixed base
-# on a singular bone the basal ring around the head rotates with the
-# direction the tail points to giving the problem retracting or extracting mesh
-# when moved for the top mesh
-# this system places helper bone around central actor in intension to fix the base
-# but animate border mesh accordingly to the rotational animation of the center
+# super_bulge is rig system to do a wobbly bulge on a fixed base
+# in opposite to super_dome this uses bendy bones to follow the
+# the movement of the top, keeping the basement fixed
+#
+# if there is a connected child named like ctr... or ctl...
+# this becomes template of main Control and is taken off the
+# list of ORG_bones
 #
 # -> needs a parent bone to fix the border to
 # -> connected children are animatable on there own (normally one)
@@ -50,7 +51,7 @@ class Rig:
     def __init__(self, obj, bone_name, params):
         # constructor for this class, in here the local parameters are defined
         self.obj = obj
-        print('!!!WIP!!! super_dome on %s' % bone_name)
+        print('!!!WIP!!! super_bulge on %s' % bone_name)
         # have the params with us
         self.params = params
         # just in case we have a suffix (not really watched for at time)
@@ -61,26 +62,41 @@ class Rig:
         eb = obj.data.edit_bones
         # base_bone is the main element of this system
         if eb[bone_name].parent:
-            print('super_dome %s parent is %s' % (bone_name,eb[bone_name].parent.name))
+            print('super_bulge %s parent is %s' % (bone_name,eb[bone_name].parent.name))
             self.base_bone = eb[bone_name].parent.name
         else:
-            print('super_dome %s has no parent' % bone_name)
+            print('super_bulge %s has no parent' % bone_name)
             self.base_bone = None
         if params.base_bone:
             self.base_bone = org(params.base_bone)
-            print('super_dome %s changed parent %s' % (bone_name,self.base_bone))
+            print('super_bulge %s changed parent %s' % (bone_name,self.base_bone))
         # org_bones[0] = dome_bone
         self.org_bones = [bone_name]
         # org_bones[1] = child (yet to assume only one)
+        self.ctrl_bone = None
         con_children = self.collect_connected_children_names(bone_name)
+        for con_name in con_children:
+            print('super_bulge connected child %s' % con_name)
+            if strip_org(con_name)[:3].upper() in ['CON','CTR','CTL']:
+                print('super_bulge ctrl_bone %s' % con_name)
+                self.ctrl_bone = con_name
+        if self.ctrl_bone:
+            print('super_bulge remove ctrl_bone %s' % self.ctrl_bone)
+            con_children.remove(self.ctrl_bone)
         self.org_bones += con_children
+        for bname in self.org_bones:
+            print('super_bulge org_bones w/o border %s' % bname)
         self.ofs_border = len(con_children) + 1
+        print('super_bulge ofs_border %d' % self.ofs_border)
         # org_bones[2:] add border bones
         unc_children = self.collect_uncon_children_names(bone_name)
-        #print( 'super_dome %d unconnected children' % len(unc_children))
+        #print( 'super_bulge %d unconnected children' % len(unc_children))
         #for child in unc_children:
-        #    print( 'super_dome unconnected child %s' % child)
+        #    print( 'super_bulge unconnected child %s' % child)
         self.org_bones += unc_children
+        print('super_bulge len org_bones %d' % len(self.org_bones))
+        # number of segments in the stretch elements
+        self.bbone_segments = params.bbone_segments
         # tweaks on extra layer ?
         if params.tweak_extra_layers:
             self.tweak_layers = list(params.tweak_layers)
@@ -103,7 +119,7 @@ class Rig:
         # for every unconnected child add
         for child in bone.children:
             if child.use_connect:
-                print('super_dome.collect_connected_children_names child %s' % child.name)
+                print('super_bulge.collect_connected_children_names child %s' % child.name)
                 names.append( child.name)
         # and out
         return names
@@ -112,14 +128,14 @@ class Rig:
         ''' returns a list of unconnected children to bone_name '''
         bone = self.obj.data.bones[bone_name]
         #if bone:
-        #    print('super_dome.collect_uncon_children_names bone %s' % bone.name)
+        #    print('super_bulge.collect_uncon_children_names bone %s' % bone.name)
         #else:
-        #    print('super_dome.collect_uncon_children_names bone not found')
+        #    print('super_bulge.collect_uncon_children_names bone not found')
         names = []
         # for every unconnected child add
         for child in bone.children:
             if not child.use_connect:
-                print('super_dome.collect_uncon_children_names child %s' % child.name)
+                print('super_bulge.collect_uncon_children_names child %s' % child.name)
                 names.append( child.name)
         # and out
         return names
@@ -128,27 +144,40 @@ class Rig:
 
         # construct mechanics of the bone system
         # i.e. for tweaking the stretch route
-        print('super_dome.make_mechanics')
+        print('super_bulge.make_mechanics')
         bpy.ops.object.mode_set(mode ='EDIT')
         eb = self.obj.data.edit_bones
         org_bones = self.org_bones
         ofs_border = self.ofs_border
         mechs = []
         # start by copying the stretch_bone in elements
+        # here two bones for head-guide_in and tail-guide_out
         for border in org_bones[ofs_border:]:
-            mch_name = mch(strip_org(border))
-            print('super_dome.make_mechanics make %s' % mch_name)
+            # 1st head-guide_in
+            mch_name = mch('H-' + strip_org(border))
+            print('super_bulge.make_mechanics make %s' % mch_name)
             mch_name = copy_bone_simple( self.obj, border, mch_name)
-            # orient mech bone, so z points away from dome_bone
-            zvec = (eb[ mch_name ].tail - eb[org_bones[0]].head)
-            #print('super_dome.make_mechanics to vector',zvec)
-            #print('super_dome.make_mechanics roll before',eb[ mch_name ].roll)
-            eb[ mch_name ].align_roll(zvec)
-            #print('super_dome.make_mechanics roll after',eb[ mch_name ].roll)
-            # point mech bones to the tail of the dome_bone (half length)
-            eb[ mch_name ].tail = eb[org_bones[0]].tail
+            ## orient mech bone, so z points away from dome_bone
+            #zvec = (eb[ mch_name ].tail - eb[org_bones[0]].head)
+            ##print('super_bulge.make_mechanics to vector',zvec)
+            ##print('super_bulge.make_mechanics roll before',eb[ mch_name ].roll)
+            #eb[ mch_name ].align_roll(zvec)
+            ##print('super_bulge.make_mechanics roll after',eb[ mch_name ].roll)
+            ## point mech bones to the tail of the dome_bone (half length)
+            #eb[ mch_name ].tail = eb[org_bones[0]].tail
+            #eb[ mch_name ].length /= 2
+            #print('super_bulge.make_mechanics roll after all',eb[ mch_name ].roll)
+            movedir = eb[border].head - eb[border].tail
+            move_to = eb[border].head + movedir
+            put_bone( self.obj, mch_name, move_to)
+            mechs += [ mch_name ]
+            # 2nd tail-guide_out
+            mch_name = mch('T-' + strip_org(border))
+            print('super_bulge.make_mechanics make %s' % mch_name)
+            mch_name = copy_bone_simple( self.obj, border, mch_name)
+            eb[ mch_name ].tail = eb[org_bones[0]].head
             eb[ mch_name ].length /= 2
-            print('super_dome.make_mechanics roll after all',eb[ mch_name ].roll)
+            put_bone( self.obj, mch_name, eb[org_bones[0]].tail)
             mechs += [ mch_name ]
         # and out
         return mechs
@@ -157,16 +186,19 @@ class Rig:
 
         # Just a control top of the dome_bone
         # other are tweaks
-        print('super_dome.make_controls')
+        print('super_bulge.make_controls')
         bpy.ops.object.mode_set(mode ='EDIT')
         eb = self.obj.data.edit_bones
         org_bones = self.org_bones
         ctrls = []
         # guide_out
         ctrl_name = org_bones[0]
-        ctrl_bone = copy_bone(self.obj,ctrl_name,strip_org(ctrl_name))
-        # put the control to the tail of the original
-        put_bone( self.obj, ctrl_bone, eb[ org_bones[0]].tail )
+        if self.ctrl_bone:
+            ctrl_bone = copy_bone_simple(self.obj,self.ctrl_bone,strip_org(ctrl_name))
+        else:
+            ctrl_bone = copy_bone_simple(self.obj,ctrl_name,strip_org(ctrl_name))
+            # put the control to the tail of the original
+            put_bone( self.obj, ctrl_bone, eb[ org_bones[0]].tail )
         ctrls.append(ctrl_bone)
         # Make widget
         bpy.ops.object.mode_set(mode ='OBJECT')
@@ -181,7 +213,7 @@ class Rig:
         # controlling the mechanics in the bone system
         # the dome_bone has its control
         # all other get a tweak
-        print('super_dome.make_tweaks')
+        print('super_bulge.make_tweaks')
         bpy.ops.object.mode_set(mode ='EDIT')
         eb = self.obj.data.edit_bones
         org_bones = self.org_bones
@@ -212,15 +244,19 @@ class Rig:
 
         # make the finally deforming skeleton meshes are rigged to
         # simply a copy of all org_bones
-        print('super_dome.make_deform')
+        print('super_bulge.make_deform')
         bpy.ops.object.mode_set(mode ='EDIT')
         eb = self.obj.data.edit_bones
         defs = []
         org_bones = self.org_bones
-        # iterate mch_chain
-        for org_bone in org_bones:
+        ofs_border = self.ofs_border - 1
+        # iterate child and border bones
+        for ix, org_bone in enumerate(org_bones[1:]):
             def_name = deformer(strip_org(org_bone))
             def_bone = copy_bone(self.obj,org_bone, def_name)
+            if ix >= ofs_border:
+                eb[def_bone].tail = eb[org_bones[0]].tail
+                eb[def_bone].bbone_segments = self.bbone_segments
             defs.append(def_bone)
         # and out
         return defs
@@ -242,7 +278,7 @@ class Rig:
     def make_constraints(self, all_bones):
 
         # make the needed constrainting modifiers to the bone system
-        print('super_dome.make_constraints')
+        print('super_bulge.make_constraints')
         # test if above works out
         #return
         bpy.ops.object.mode_set(mode ='OBJECT')
@@ -252,9 +288,10 @@ class Rig:
         ctrls   = all_bones['ctrl'  ]
         tweaks  = all_bones['tweak' ]
         deforms = all_bones['deform']
+        ofs_border = self.ofs_border - 1
         # constraints
         # STRETCH_TO for ORG-dome_bone to ctrls[0]
-        print('super_dome.make_constraints %s to %s' % (org_bones[0],ctrls[0]))
+        print('super_bulge.make_constraints %s to %s' % (org_bones[0],ctrls[0]))
         self.make_constraint(org_bones[0], {
             'constraint': 'STRETCH_TO'
             , 'subtarget': ctrls[0]
@@ -264,33 +301,32 @@ class Rig:
         pb[ctrls[0]].lock_rotation   = True, True, True
         pb[ctrls[0]].lock_rotation_w = True
         pb[ctrls[0]].lock_scale      = True, True, True
-        # STRETCH_TO for border mechs to ctrl
-        for mch in mechs:
-            print('super_dome.make_constraints %s to %s' % (mch,ctrls[0]))
-            self.make_constraint(mch, {
+        # STRETCH_TO for border deforms to ctrl
+        for ix, deform in enumerate(deforms[ofs_border:]):
+            print('super_bulge.make_constraints %s to %s' % (deform,ctrls[0]))
+            self.make_constraint(deform, {
                 'constraint': 'STRETCH_TO'
                 , 'subtarget': ctrls[0]
                 })
-            # limit rotation on z
-            self.make_constraint(mch, {
-                'constraint': 'LIMIT_ROTATION'
-                , 'use_limit_z': True
-                , 'min_z' : 0.0
-                , 'max_z' : 0.0
-                , 'owner_space' : 'LOCAL'
-                })
-
+            pb[deform].use_bbone_custom_handles = True
+            from_bone = mechs[ ix * 2 ]
+            print('super_bulge.make_constraints %s handle_in %s' % (deform,from_bone))
+            pb[deform].bbone_custom_handle_start = pb[from_bone]
+            to_bone = mechs[ ix * 2 + 1 ]
+            print('super_bulge.make_constraints %s handle_out %s' % (deform,to_bone))
+            pb[deform].bbone_custom_handle_end = pb[to_bone]
         # and out
 
     def parent_bones(self, all_bones):
 
         # give the parenting to the constructed bone system
-        print('super_dome.parent_bones')
+        print('super_bulge.parent_bones')
         # test if above works out
         #return
         bpy.ops.object.mode_set(mode ='EDIT')
         org_bones = self.org_bones
         ofs_border = self.ofs_border
+        ofs_cons = ofs_border-1
         eb        = self.obj.data.edit_bones
         mechs   = all_bones['mech'  ]
         ctrls   = all_bones['ctrl'  ]
@@ -299,52 +335,57 @@ class Rig:
         # parenting
         # ORG-dome_bone to base
         eb[org_bones[0]].use_connect = False
-        print('super_dome.parent_bones %s to %s' % (org_bones[0],self.base_bone))
+        print('super_bulge.parent_bones %s to %s' % (org_bones[0],self.base_bone))
         eb[org_bones[0]].parent = eb[self.base_bone]
-        # DEF-dome_bone to ORG-dome_bone
-        eb[deforms[0]].use_connect = False
-        print('super_dome.parent_bones %s to %s' % (deforms[0],org_bones[0]))
-        eb[deforms[0]].parent = eb[org_bones[0]]
 
         # ORG-con-childs to ctrl
         for con_child in org_bones[1:ofs_border]:
             eb[con_child].use_connect = False
-            print('super_dome.parent_bones %s to %s' % (con_child,ctrls[0]))
+            print('super_bulge.parent_bones %s to %s' % (con_child,ctrls[0]))
             eb[con_child].parent = eb[ctrls[0]]
-        ofs_cons = ofs_border-1
         # tweak con-childs to ORG-con-childs
         for ix, con_tweak in enumerate(tweaks[:ofs_cons]):
             eb[con_tweak].use_connect = False
-            print('super_dome.parent_bones %s to %s' % (con_tweak,org_bones[ix+1]))
+            print('super_bulge.parent_bones %s to %s' % (con_tweak,org_bones[ix+1]))
             eb[con_tweak].parent = eb[org_bones[ix+1]]
         # DEF-con-childs to tweak con-childs
-        for ix, con_def in enumerate(deforms[1:ofs_border]):
+        for ix, con_def in enumerate(deforms[:ofs_cons]):
             eb[con_def].use_connect = False
-            print('super_dome.parent_bones %s to %s' % (con_def,tweaks[ix]))
+            print('super_bulge.parent_bones %s to %s' % (con_def,tweaks[ix]))
             eb[con_def].parent = eb[tweaks[ix]]
 
         # border
-        # border mechs to base
-        for mech in mechs:
-            eb[mech].use_connect = False
-            print('super_dome.parent_bones %s to %s' % (mech,self.base_bone))
-            eb[mech].parent = eb[self.base_bone]
-        # border tweaks to mechs
+        # border orgs to base
+        for border in org_bones[ofs_border:]:
+            eb[border].use_connect = False
+            print('super_bulge.parent_bones %s to %s' % (border,self.base_bone))
+            eb[border].parent = eb[self.base_bone]
+        # border tweaks to orgs
         for ix,brd_tweak in enumerate(tweaks[ofs_cons:]):
             eb[brd_tweak].use_connect = False
-            print('super_dome.parent_bones %s to %s' % (brd_tweak,mechs[ix]))
-            eb[brd_tweak].parent = eb[mechs[ix]]
-        # border defs to tweaks
-        for ix,brd_def in enumerate(deforms[ofs_border:]):
+            print('super_bulge.parent_bones %s to %s' % (brd_tweak,org_bones[ix+ofs_border]))
+            eb[brd_tweak].parent = eb[org_bones[ix+ofs_border]]
+        # border mechs to tweaks & top mechs to ctrl
+        for ix, mech in enumerate(mechs):
+            if ix % 2 == 0:
+                eb[mech].use_connect = False
+                print('super_bulge.parent_bones %s to %s' % (mech,tweaks[ofs_cons+ix//2]))
+                eb[mech].parent = eb[tweaks[ofs_cons+ix//2]]
+            else:
+                eb[mech].use_connect = False
+                print('super_bulge.parent_bones %s to %s' % (mech,ctrls[0]))
+                eb[mech].parent = eb[ctrls[0]]
+        # border defs to mechs
+        for ix,brd_def in enumerate(deforms[ofs_cons:]):
             eb[brd_def].use_connect = False
-            print('super_dome.parent_bones %s to %s' % (brd_def,tweaks[ix+1]))
-            eb[brd_def].parent = eb[tweaks[ix+1]]
+            print('super_bulge.parent_bones %s to %s' % (brd_def,tweaks[ofs_cons+ix]))
+            eb[brd_def].parent = eb[tweaks[ofs_cons+ix]]
         # and out
 
     def generate(self):
 
         # main generation method
-        print('super_dome.generate')
+        print('super_bulge.generate')
         bpy.ops.object.mode_set(mode ='EDIT')
         eb = self.obj.data.edit_bones
         # create a base_bone of org_bones[0] if not set
@@ -387,6 +428,13 @@ def add_parameters(params):
         default = '',
         description = "Base bone to parent to (if none build one)"
         )
+    # number of segments in the stretch elements
+    params.bbone_segments = bpy.props.IntProperty(
+        name        = 'bbone segments',
+        default     = 7,
+        min         = 3,
+        description = 'Number of segments in bendies'
+    )
     # Setting up extra tweak layers
     # do extra layer for tweaks
     params.tweak_extra_layers = bpy.props.BoolProperty(
@@ -410,6 +458,9 @@ def parameters_ui(layout, params):
     # param base bone
     r = layout.row()
     r.prop_search(params, 'base_bone', pb, "bones", text="Base bone")
+    # number of segments in the stretch elements
+    r = layout.row()
+    r.prop(params, "bbone_segments", text="Number segments in bendies")
     # do extra layer for tweaks
     r = layout.row()
     r.prop(params, "tweak_extra_layers", text="Tweak extra")
@@ -518,7 +569,7 @@ def create_sample(obj):
     pbone.lock_scale = (False, False, False)
     pbone.rotation_mode = 'QUATERNION'
     pbone = obj.pose.bones[bones['dome']]
-    pbone.rigify_type = 'experimental.super_dome'
+    pbone.rigify_type = 'experimental.super_bulge'
     pbone.lock_location = (False, False, False)
     pbone.lock_rotation = (False, False, False)
     pbone.lock_rotation_w = False

@@ -977,7 +977,7 @@ def get_metarig_module(metarig_name, path=METARIG_DIR):
 
 def connected_children_names(obj, bone_name):
     """ Returns a list of bone names (in order) of the bones that form a single
-        connected chain starting with the given bone as a parent.
+        connected _chain_ starting with the given bone as a parent.
         If there is a connected branch, the list stops there.
     """
     bone = obj.data.bones[bone_name]
