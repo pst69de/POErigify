@@ -388,6 +388,10 @@ def generate_rig(context, metarig):
 
     bpy.ops.object.mode_set(mode='EDIT')
     for bone in bones:
+        # POE 2018-08-05 set bbone-measures to readable size
+        obj.data.edit_bones[bone].bbone_x = 0.005
+        obj.data.edit_bones[bone].bbone_z = 0.005
+        # parametric not yet implemented
         if bone in noparent_bones:
             continue
         elif obj.data.edit_bones[bone].parent is None:

@@ -372,6 +372,10 @@ class Rig:
         eb[org_bones[0]].use_connect = False
         print('super_bulge.parent_bones %s to %s' % (org_bones[0],self.base_bone))
         eb[org_bones[0]].parent = eb[self.base_bone]
+        # Ctrl to base
+        eb[ctrls[0]].use_connect = False
+        print('super_bulge.parent_bones %s to %s' % (ctrls[0],self.base_bone))
+        eb[ctrls[0]].parent = eb[self.base_bone]
 
         # ORG-con-childs to ctrl
         for con_child in org_bones[1:ofs_border]:
