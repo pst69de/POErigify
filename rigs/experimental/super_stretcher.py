@@ -84,8 +84,8 @@ class Rig:
         # just in case we have a suffix
         # (L = Left, R = Right, F = Front, B = Back, U = to Up above, D = to Down below)
         self.suffix = ''
-        if bone_name[-2].upper() in ['.L','.R','.F','.B','.U','.D']:
-            self.suffix = bone_name[-2]
+        if bone_name[-2:].upper() in ['.L','.R','.F','.B','.U','.D']:
+            self.suffix = bone_name[-2:]
         # this list may be modified by head or tail params
         self.org_bones = []
         # + bone_name.parent

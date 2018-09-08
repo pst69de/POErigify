@@ -57,8 +57,8 @@ class Rig:
         # just in case we have a suffix (not really watched for at time)
         # (L = Left, R = Right, F = Front, B = Back, U = to Up above, D = to Down below)
         self.suffix = ''
-        if bone_name[-2].upper() in ['.L','.R','.F','.B','.U','.D']:
-            self.suffix = bone_name[-2]
+        if bone_name[-2:].upper() in ['.L','.R','.F','.B','.U','.D']:
+            self.suffix = bone_name[-2:]
         eb = obj.data.edit_bones
         # base_bone is the main element of this system
         if eb[bone_name].parent:
