@@ -40,13 +40,14 @@ import mathutils
 
 class weightporter():
 
-    def export_weights(self, to_file, from_mesh):
+    def export_weights(self, to_file, from_mesh, afilter):
 
         # export weights to given to_file
         print('weightporter.export_weights: export to %s' % to_file)
         weights_dic = {}
         me = from_mesh
-        vgs = from_mesh.vertex_groups
+        # filter groups
+        vgs = [avg for avg in from_mesh.vertex_groups if afilter in avg.name]
         # for vertex group in mesh groups:
         for vg in vgs:
             wdic = weights_dic[vg.name] = {}
@@ -64,7 +65,7 @@ class weightporter():
         return
         # method export_pose over
 
-    def import_weights(self, from_file, to_mesh):
+    def import_weights(self, from_file, to_mesh, afilter):
 
         # import weights to mesh
         print('weightporter.import_weights: import from %s' % from_file)
@@ -80,7 +81,9 @@ class weightporter():
         input_file.close()
         if weights_dic:
             print('weightporter.import_weights: valid json dic')
-            for vg in weights_dic:
+            # filter weight groups to import
+            wts = [avg for avg in weights_dic if afilter in avg]
+            for vg in wts:
                 print('weightporter.import_weights: group: %s, %d vertices' % (vg, len(weights_dic[vg])))
                 gr = weights_dic[vg]
                 vgr = vgs.active
@@ -117,6 +120,8 @@ class ToolsPanel(bpy.types.Panel):
         # ~ toolsettings = context.tool_settings
         col = layout.column(align=True)
         row = col.row(align=True)
+        row.prop(id_store, "weights_eximp_filter", text="", icon="SORTALPHA")
+        row = col.row(align=True)
         row.operator('rigify_expimp.export_weights', icon='EXPORT')
         row = col.row(align=True)
         row.operator('rigify_expimp.import_weights', icon='IMPORT')
@@ -152,12 +157,13 @@ class WEIGHT_OT_expimp_export(bpy.types.Operator):
     def execute(self, context):
         obj = bpy.context.active_object
         mesh = bpy.context.active_object
+        id_store = context.window_manager
 
         #print("*************SELECTED FILES ***********")
         #print("FILEPATH: %s" % self.filepath) # display the file name and current path
         #for file in self.files:
         #    print("FILENAME: %s" % file.name)
-        weightPorter.export_weights(self.filepath, mesh)
+        weightPorter.export_weights(self.filepath, mesh, id_store.weights_eximp_filter)
 
         return {'FINISHED'}
 
@@ -192,20 +198,25 @@ class WEIGHT_OT_expimp_import(bpy.types.Operator):
     def execute(self, context):
         obj = bpy.context.active_object
         mesh = bpy.context.active_object
+        id_store = context.window_manager
 
-        weightPorter.import_weights(self.filepath, mesh)
+        weightPorter.import_weights(self.filepath, mesh, id_store.weights_eximp_filter)
 
         return {'FINISHED'}
 
 
 def register():
+    IDStore = bpy.types.WindowManager
     bpy.utils.register_class(ToolsPanel)
     bpy.utils.register_class(WEIGHT_OT_expimp_export)
     bpy.utils.register_class(WEIGHT_OT_expimp_import)
+    IDStore.weights_eximp_filter = StringProperty(name="weights_eximp_filter", description="Filterfragment importing json weights", maxlen= 32, default= "")
 
 def unregister():
+    IDStore = bpy.types.WindowManager
     bpy.utils.unregister_class(ToolsPanel)
     bpy.utils.unregister_class(WEIGHT_OT_expimp_export)
     bpy.utils.unregister_class(WEIGHT_OT_expimp_import)
+    del IDStore.weights_eximp_filter
 
 # bpy.utils.register_module(__name__)
