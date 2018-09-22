@@ -36,6 +36,8 @@ from . import rot_mode
 from . import pose_expimp
 # POE 2018-09-08 POE Toolbox (make offset bone)
 from . import poerigify_toolbox
+# POE 2018-09-22 POE Weights Export Import
+from . import weights_expimp
 
 
 class DATA_PT_rigify_buttons(bpy.types.Panel):
@@ -1355,6 +1357,8 @@ def register():
     pose_expimp.register()
     # POE 2018-09-08 POE Toolbox (make offset bone)
     poerigify_toolbox.register()
+    # POE 2018-09-22 POE Weights Export Import
+    weights_expimp.register()
     # def register() over
 
 def unregister():
@@ -1395,4 +1399,6 @@ def unregister():
     pose_expimp.unregister()
     # POE 2018-09-08 POE Toolbox (make offset bone)
     poerigify_toolbox.unregister()
+    # POE 2018-09-22 POE Weights Export Import
+    weights_expimp.unregister()
     # def unregister() over
