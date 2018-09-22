@@ -45,10 +45,19 @@ class weightporter():
         # export weights to given to_file
         print('weightporter.export_weights: export to %s' % to_file)
         weights_dic = {}
+        me = from_mesh
         vgs = from_mesh.vertex_groups
         # for vertex group in mesh groups:
         for vg in vgs:
-            print('weightporter.export_weights: %s' % vg.name)
+            wdic = weights_dic[vg.name] = {}
+            vgix = vg.index
+            vs = [ v for v in me.data.vertices if vgix in [ vxg.group for vxg in v.groups if vxg.weight > 0.001] ]
+            print('weightporter.export_weights: %s, %d vertices' % (vg.name, len(vs)))
+            for vertex in vs:
+                for vxg in vertex.groups:
+                    if vxg.group == vgix:
+                        wdic[vertex.index] = vxg.weight
+                        #print('v: %d : %f' % (vertex.index, vxg.weight))
         output_file = open(to_file, 'w')
         json.dump(weights_dic, output_file, sort_keys=True, indent=4)
         output_file.close()
@@ -59,6 +68,8 @@ class weightporter():
 
         # import weights to mesh
         print('weightporter.import_weights: import from %s' % from_file)
+        me = to_mesh
+        vgs = to_mesh.vertex_groups
         input_file = open(from_file, "r")
         weights_dic = None
         try:
@@ -69,6 +80,18 @@ class weightporter():
         input_file.close()
         if weights_dic:
             print('weightporter.import_weights: valid json dic')
+            for vg in weights_dic:
+                print('weightporter.import_weights: group: %s, %d vertices' % (vg, len(weights_dic[vg])))
+                gr = weights_dic[vg]
+                vgr = vgs.active
+                if not vg in vgs:
+                    vgr = vgs.new(vg)
+                else:
+                    vgr = vgs[vg]
+                for vix in gr:
+                    vidx = int(vix)
+                    #print('vertex: %d, %f' % (vidx, gr[vix]))
+                    vgr.add([vidx],gr[vix],'REPLACE')
         return
         # method import_pose over
     # class over
@@ -170,7 +193,7 @@ class WEIGHT_OT_expimp_import(bpy.types.Operator):
         obj = bpy.context.active_object
         mesh = bpy.context.active_object
 
-        weightPorter.export_weights(self.filepath, mesh)
+        weightPorter.import_weights(self.filepath, mesh)
 
         return {'FINISHED'}
 
