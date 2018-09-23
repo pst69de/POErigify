@@ -56,6 +56,10 @@ class Rig:
             self.secondary_layers = list(params.secondary_layers)
         else:
             self.secondary_layers = None
+        # POE 2018-09-23 extra deforms on eyes / teeth
+        self.extra_def_eyes = params.extra_def_eyes
+        self.extra_def_teeth = params.extra_def_teeth
+        # over __init__(self, obj, bone_name, params)
 
     def orient_org_bones(self):
 
@@ -87,7 +91,14 @@ class Rig:
 
         def_bones = []
         for org in org_bones:
-            if 'face' in org or 'teeth' in org or 'eye' in org:
+            # POE 2018-09-23 extra deforms on eyes / teeth
+            #if 'face' in org or 'teeth' in org or 'eye' in org:
+            #    continue
+            if 'face' in org:
+                continue
+            if not self.extra_def_teeth and 'teeth' in org:
+                continue
+            if not self.extra_def_eyes and 'eye' in org:
                 continue
 
             def_name = make_deformer_name( strip_org( org ) )
@@ -491,13 +502,21 @@ class Rig:
         # Parent ORG eyes to corresponding mch bones
         for bone in [ bone for bone in org_bones if 'eye' in bone ]:
             eb[ bone ].parent = eb[ make_mechanism_name( strip_org( bone ) ) ]
+            # POE 2018-09-23 extra deforms on eyes / teeth DEF-eye to ORG-eye
+            if self.extra_def_eyes:
+                eb[ make_deformer_name(strip_org( bone)) ].parent = eb[ bone ]
+
+        # POE 2018-09-23 extra deforms on eyes / teeth DEF-teeth to ORG-teeth
+        # simply coded
+        if self.extra_def_teeth:
+            eb['DEF-teeth.T'].parent = eb['ORG-teeth.T']
+            eb['DEF-teeth.B'].parent = eb['ORG-teeth.B']
 
         for lip_tweak in list( tweak_unique.values() ):
             # find the def bones that match unique lip_tweaks by slicing [4:-2]
             # example: 'lip.B' matches 'DEF-lip.B.R' and 'DEF-lip.B.L' if
             # you cut off the "DEF-" [4:] and the ".L" or ".R" [:-2]
             lip_defs = [ bone for bone in all_bones['deform']['all'] if bone[4:-2] == lip_tweak ]
-
             for bone in lip_defs:
                 eb[bone].parent = eb[ lip_tweak ]
 
@@ -1052,6 +1071,18 @@ def add_parameters(params):
         description="Layers for the 2nd tweak controls to be on",
         default=tuple([i == 1 for i in range(0, 32)])
         )
+    # POE 2018-09-23 extra deforms on eyes / teeth
+    params.extra_def_eyes = bpy.props.BoolProperty(
+        name="extra_def_eyes",
+        default=False,
+        description="Extra Deform Bones on Eyes"
+        )
+    params.extra_def_teeth = bpy.props.BoolProperty(
+        name="extra_def_teeth",
+        default=False,
+        description="Extra Deform Bones on Teeth"
+        )
+    # over add_parameters(params)
 
 
 def parameters_ui(layout, params):
@@ -1095,6 +1126,11 @@ def parameters_ui(layout, params):
             if bone_layers[i]:
                 icon = "LAYER_ACTIVE"
             row.prop(params, layer, index=i, toggle=True, text="", icon=icon)
+    # POE 2018-09-23 extra deforms on eyes / teeth
+    r = layout.row()
+    r.prop(params, "extra_def_eyes", text="Extra DEF eyes")
+    r.prop(params, "extra_def_teeth", text="Extra DEF teeth")
+    # over parameters_ui(layout, params)
 
 
 def create_sample(obj):
@@ -2427,4 +2463,3 @@ def create_square_widget(rig, bone_name, size=1.0, bone_transform_name=None):
         return obj
     else:
         return None
-
