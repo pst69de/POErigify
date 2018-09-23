@@ -38,7 +38,7 @@ from bpy.props import StringProperty, CollectionProperty, BoolVectorProperty
 import json
 import mathutils
 
-class porter():
+class posesporter():
 
     def convert_from_matrix(self, matrix):
         return (
@@ -94,11 +94,11 @@ class porter():
         return
         # method import_pose over
     # class over
-porter = porter()
+posesPorter = posesporter()
 
 # GUI (Panel)
 #
-class ToolsPanel(bpy.types.Panel):
+class ToolsPanelPoses(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'TOOLS'
     bl_category = "Tools"
@@ -145,14 +145,14 @@ class ToolsPanel(bpy.types.Panel):
             row.prop(id_store, "pose_bones_export_set", index=i, toggle=True, text="", icon=icon)
         col = layout.column(align=True)
         row = col.row(align=True)
-        row.operator('rigify_expimp.export', icon='EXPORT')
+        row.operator('rigify_expimp.export_poses', icon='EXPORT')
         row = col.row(align=True)
-        row.operator('rigify_expimp.import', icon='IMPORT')
+        row.operator('rigify_expimp.import_poses', icon='IMPORT')
 
 
 class POSE_OT_expimp_export(bpy.types.Operator):
     bl_label = 'Export current pose'
-    bl_idname = 'rigify_expimp.export'
+    bl_idname = 'rigify_expimp.export_poses'
     bl_description = 'Exports current Action to JSON'
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -194,7 +194,7 @@ class POSE_OT_expimp_export(bpy.types.Operator):
 
 class POSE_OT_expimp_import(bpy.types.Operator):
     bl_label = 'Import a pose'
-    bl_idname = 'rigify_expimp.import'
+    bl_idname = 'rigify_expimp.import_poses'
     bl_description = 'Imports Action from JSON to selected'
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -237,13 +237,13 @@ def register():
         description = "Layers exporting pose bones",
         default     = tuple( [ i < 29 for i in range(0, 32) ] )
         )
-    bpy.utils.register_class(ToolsPanel)
+    bpy.utils.register_class(ToolsPanelPoses)
     bpy.utils.register_class(POSE_OT_expimp_export)
     bpy.utils.register_class(POSE_OT_expimp_import)
 
 def unregister():
     IDStore = bpy.types.WindowManager
-    bpy.utils.unregister_class(ToolsPanel)
+    bpy.utils.unregister_class(ToolsPanelPoses)
     bpy.utils.unregister_class(POSE_OT_expimp_export)
     bpy.utils.unregister_class(POSE_OT_expimp_import)
     del IDStore.pose_bones_export_set

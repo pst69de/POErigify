@@ -102,7 +102,7 @@ weightPorter = weightporter()
 
 # GUI (Panel)
 #
-class ToolsPanel(bpy.types.Panel):
+class ToolsPanelWeights(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'TOOLS'
     bl_category = "Tools"
@@ -207,14 +207,14 @@ class WEIGHT_OT_expimp_import(bpy.types.Operator):
 
 def register():
     IDStore = bpy.types.WindowManager
-    bpy.utils.register_class(ToolsPanel)
+    bpy.utils.register_class(ToolsPanelWeights)
     bpy.utils.register_class(WEIGHT_OT_expimp_export)
     bpy.utils.register_class(WEIGHT_OT_expimp_import)
     IDStore.weights_eximp_filter = StringProperty(name="weights_eximp_filter", description="Filterfragment importing json weights", maxlen= 32, default= "")
 
 def unregister():
     IDStore = bpy.types.WindowManager
-    bpy.utils.unregister_class(ToolsPanel)
+    bpy.utils.unregister_class(ToolsPanelWeights)
     bpy.utils.unregister_class(WEIGHT_OT_expimp_export)
     bpy.utils.unregister_class(WEIGHT_OT_expimp_import)
     del IDStore.weights_eximp_filter
